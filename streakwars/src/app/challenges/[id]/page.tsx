@@ -13,6 +13,8 @@ import WarDeclarationModal from "../../../components/WarDeclarationModal";
 import WarNotification from "../../../components/WarNotification";
 import ActiveWarDashboard from "../../../components/ActiveWarDashboard";
 import SabotageChallengeSystem from "../../../components/SabotageChallengeSystem";
+import SabotageEffectsSystem from "../../../components/SabotageEffectsSystem";
+import SabotageHabitBlocker from "../../../components/SabotageHabitBlocker";
 
 export default function ChallengeDetailPage() {
   const { user } = useUser();
@@ -199,6 +201,9 @@ export default function ChallengeDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Sabotage Effects System */}
+      <SabotageEffectsSystem userId={currentUser._id} challengeId={challengeId} />
+      
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -556,21 +561,23 @@ export default function ChallengeDetailPage() {
               </div>
             )}
             {/* Target Habits */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Target Habits</h2>
-              {challenge.targetHabits.length === 0 ? (
-                <p className="text-gray-500 text-sm">No specific habits defined for this challenge.</p>
-              ) : (
-                <div className="space-y-2">
-                  {challenge.targetHabits.map((habit, index) => (
-                    <div key={index} className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
-                      <span className="text-lg">🎯</span>
-                      <span className="text-gray-900">{habit}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <SabotageHabitBlocker userId={currentUser._id} challengeId={challengeId}>
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Target Habits</h2>
+                {challenge.targetHabits.length === 0 ? (
+                  <p className="text-gray-500 text-sm">No specific habits defined for this challenge.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {challenge.targetHabits.map((habit, index) => (
+                      <div key={index} className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
+                        <span className="text-lg">🎯</span>
+                        <span className="text-gray-900">{habit}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </SabotageHabitBlocker>
 
             {/* Prize Pool Details */}
             {challenge.prizeType !== "none" && (
