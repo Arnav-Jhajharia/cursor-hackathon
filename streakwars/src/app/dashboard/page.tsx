@@ -7,10 +7,17 @@ import { useState, useEffect } from "react";
 import HabitList from "../../components/HabitList";
 import StatsOverview from "../../components/StatsOverview";
 import AddHabitModal from "../../components/AddHabitModal";
+import AITestPanel from "../../components/AITestPanel";
+import WarSystemTest from "../../components/WarSystemTest";
 
 export default function DashboardPage() {
   const { user } = useUser();
   const [showAddHabit, setShowAddHabit] = useState(false);
+
+  // Cleanup mutations
+  const clearAllChallenges = useMutation(api.cleanup.clearAllChallenges);
+  const clearAllHabits = useMutation(api.cleanup.clearAllHabits);
+  const clearEverything = useMutation(api.cleanup.clearEverything);
 
   // Get or create user
   const createOrUpdateUser = useMutation(api.users.createOrUpdateUser);
@@ -46,6 +53,131 @@ export default function DashboardPage() {
             Welcome back, {currentUser.name}! 👋
           </h1>
           <p className="text-gray-600">Ready to build some amazing habits today?</p>
+        </div>
+
+        {/* AI TEST PANEL */}
+        <AITestPanel />
+
+        {/* WAR SYSTEM TEST */}
+        <WarSystemTest />
+
+        {/* CLEANUP PANEL - SUPER VISIBLE */}
+        <div style={{
+          backgroundColor: '#ff0000',
+          border: '10px solid #000000',
+          borderRadius: '20px',
+          padding: '20px',
+          marginBottom: '20px',
+          position: 'relative',
+          zIndex: 9999,
+          minHeight: '200px'
+        }}>
+          <h2 style={{
+            fontSize: '30px',
+            fontWeight: 'bold',
+            color: '#ffffff',
+            textAlign: 'center',
+            marginBottom: '20px',
+            textShadow: '2px 2px 4px #000000'
+          }}>
+            🧹 CLEANUP PANEL 🧹
+          </h2>
+          <p style={{
+            color: '#ffffff',
+            fontSize: '18px',
+            textAlign: 'center',
+            marginBottom: '20px'
+          }}>
+            Use these buttons to clear data and start fresh.
+          </p>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <button
+              onClick={async () => {
+                if (!confirm("Clear all challenges?")) return;
+                try {
+                  const result = await clearAllChallenges({});
+                  alert(`Cleared ${result.deleted.challenges} challenges!`);
+                } catch (error) {
+                  alert("Error clearing challenges");
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '15px',
+                backgroundColor: '#ff6600',
+                color: '#ffffff',
+                border: '3px solid #000000',
+                borderRadius: '10px',
+                fontSize: '20px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              🗑️ Clear All Challenges
+            </button>
+            
+            <button
+              onClick={async () => {
+                if (!confirm("Clear all habits?")) return;
+                try {
+                  const result = await clearAllHabits({});
+                  alert(`Cleared ${result.deleted.habits} habits!`);
+                } catch (error) {
+                  alert("Error clearing habits");
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '15px',
+                backgroundColor: '#ffcc00',
+                color: '#000000',
+                border: '3px solid #000000',
+                borderRadius: '10px',
+                fontSize: '20px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              🗑️ Clear All Habits
+            </button>
+            
+            <button
+              onClick={async () => {
+                if (!confirm("🚨 NUCLEAR OPTION 🚨\n\nThis will delete EVERYTHING!\n\nAre you absolutely sure?")) return;
+                try {
+                  const result = await clearEverything({});
+                  alert(result.message);
+                } catch (error) {
+                  alert("Error clearing everything");
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '15px',
+                backgroundColor: '#cc0000',
+                color: '#ffffff',
+                border: '5px solid #000000',
+                borderRadius: '10px',
+                fontSize: '20px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                animation: 'pulse 1s infinite'
+              }}
+            >
+              🚨 NUCLEAR: Clear Everything 🚨
+            </button>
+          </div>
+          
+          <div style={{
+            marginTop: '15px',
+            fontSize: '14px',
+            color: '#ffffff',
+            textAlign: 'center',
+            fontWeight: 'bold'
+          }}>
+            ⚠️ These actions cannot be undone! Use with caution.
+          </div>
         </div>
 
         {/* Stats Overview */}

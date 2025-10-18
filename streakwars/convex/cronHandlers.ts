@@ -66,11 +66,34 @@ export const settleMonthlyChallenges = internalMutation({
     lastMonth.setDate(1);
     lastMonth.setHours(0, 0, 0, 0);
     const startOfLastMonth = lastMonth.getTime();
-
+    
     const endOfLastMonth = new Date(lastMonth);
     endOfLastMonth.setMonth(endOfLastMonth.getMonth() + 1);
     endOfLastMonth.setHours(0, 0, 0, 0);
     const endOfLastMonthTime = endOfLastMonth.getTime();
+
+    // Get or create system user
+    let systemUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", "system_user"))
+      .first();
+    
+    let systemUserId;
+    if (!systemUser) {
+      systemUserId = await ctx.db.insert("users", {
+        clerkId: "system_user",
+        name: "System",
+        email: "system@habituate.app",
+        totalPoints: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        rewardsBalance: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } else {
+      systemUserId = systemUser._id;
+    }
 
     // Get challenges that ended last month
     const endedChallenges = await ctx.db
@@ -193,6 +216,8 @@ export const settleMonthlyChallenges = internalMutation({
         endDate: newChallengeEndTime,
         targetHabits,
         isActive: true,
+        prizeType: "none",
+        createdBy: systemUserId,
         createdAt: now,
       });
 

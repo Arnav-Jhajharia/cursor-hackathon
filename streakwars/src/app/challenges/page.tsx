@@ -6,6 +6,7 @@ import { api } from "../../../convex/_generated/api";
 import { useState, useEffect } from "react";
 import { Id } from "../../../convex/_generated/dataModel";
 import ChallengeBuilder from "../../components/ChallengeBuilder";
+import Link from "next/link";
 
 export default function ChallengesPage() {
   const { user } = useUser();
@@ -27,6 +28,7 @@ export default function ChallengesPage() {
   
   const joinChallenge = useMutation(api.challenges.joinChallenge);
   const createChallenge = useMutation(api.challenges.createChallenge);
+  const inviteFriendsToChallenge = useMutation(api.challenges.inviteFriendsToChallenge);
   const createDefaultChallenges = useMutation(api.challengeSets.createDefaultChallenges);
 
   useEffect(() => {
@@ -53,11 +55,23 @@ export default function ChallengesPage() {
   const handleCreateChallenge = async (challengeData: any) => {
     if (!currentUser) return;
     try {
-      await createChallenge({
-        ...challengeData,
+      const { selectedFriends, ...challengeInfo } = challengeData;
+      const challengeId = await createChallenge({
+        ...challengeInfo,
         createdBy: currentUser._id,
       });
+      
+      // Send friend invitations if any friends were selected
+      if (selectedFriends && selectedFriends.length > 0) {
+        await inviteFriendsToChallenge({
+          challengeId,
+          inviterId: currentUser._id,
+          friendIds: selectedFriends,
+        });
+      }
+      
       setShowCreateModal(false);
+      alert("Challenge created successfully!");
     } catch (error) {
       console.error("Error creating challenge:", error);
       alert("Error creating challenge");
@@ -133,7 +147,8 @@ export default function ChallengesPage() {
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {activeChallenges.map((challenge: any) => (
-                  <div key={challenge._id} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+                  <Link key={challenge._id} href={`/challenges/${challenge._id}`}>
+                    <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
                     <div className="mb-4">
                       <h3 className="text-xl font-bold text-gray-900 mb-2">{challenge.name}</h3>
                       <p className="text-gray-600 text-sm">{challenge.description}</p>
@@ -162,7 +177,8 @@ export default function ChallengesPage() {
                         ))}
                       </div>
                     </div>
-                  </div>
+                    </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -203,7 +219,8 @@ export default function ChallengesPage() {
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {availableChallenges.map((challenge: any) => (
-                  <div key={challenge._id} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+                  <Link key={challenge._id} href={`/challenges/${challenge._id}`}>
+                    <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
                     <div className="mb-4">
                       <h3 className="text-xl font-bold text-gray-900 mb-2">{challenge.name}</h3>
                       <p className="text-gray-600 text-sm">{challenge.description}</p>
@@ -229,13 +246,8 @@ export default function ChallengesPage() {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => handleJoinChallenge(challenge._id)}
-                      className="w-full py-3 bg-gray-800 text-white rounded-xl font-semibold text-sm hover:bg-gray-700 transition-colors"
-                    >
-                      Join Challenge
-                    </button>
-                  </div>
+                    </div>
+                  </Link>
                 ))}
               </div>
             )}

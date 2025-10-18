@@ -1,6 +1,16 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
+// Generate a unique invite code
+function generateInviteCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 // Get current active challenge
 export const getCurrentChallenge = query({
   args: {},
@@ -44,24 +54,49 @@ export const createChallenge = mutation({
     name: v.string(),
     description: v.string(),
     duration: v.number(), // Duration in days
-    prize: v.optional(v.string()),
     targetHabits: v.array(v.string()), // Changed to strings for now
     createdBy: v.id("users"),
+    prizeType: v.string(),
+    prizeAmount: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    isPublic: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
     const startDate = now;
     const endDate = now + (args.duration * 24 * 60 * 60 * 1000); // Convert days to milliseconds
     
-    return await ctx.db.insert("challenges", {
+    // Generate unique invite code
+    const inviteCode = generateInviteCode();
+    
+    const challengeId = await ctx.db.insert("challenges", {
       name: args.name,
       description: args.description,
       startDate: startDate,
       endDate: endDate,
       targetHabits: args.targetHabits,
       isActive: true,
+      prizeType: args.prizeType,
+      prizeAmount: args.prizeAmount,
+      currency: args.currency,
+      createdBy: args.createdBy,
       createdAt: now,
+      isPublic: args.isPublic || false,
+      inviteCode,
     });
+
+    // Create prize pool if it's a money challenge
+    if (args.prizeType === "money" && args.prizeAmount) {
+      await ctx.db.insert("prizePools", {
+        challengeId,
+        totalAmount: args.prizeAmount * 100, // Convert to cents
+        currency: args.currency || "USD",
+        status: "active",
+        createdAt: now,
+      });
+    }
+
+    return challengeId;
   },
 });
 
@@ -323,4 +358,211 @@ export const getAvailableChallenges = query({
     return challengesWithDetails;
   },
 });
+
+// Invite friends to a challenge
+export const inviteFriendsToChallenge = mutation({
+  args: {
+    challengeId: v.id("challenges"),
+    inviterId: v.id("users"),
+    friendIds: v.array(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    const challenge = await ctx.db.get(args.challengeId);
+    if (!challenge) {
+      throw new Error("Challenge not found");
+    }
+
+    if (challenge.createdBy !== args.inviterId) {
+      throw new Error("Only the challenge creator can invite friends");
+    }
+
+    const invitations = [];
+    for (const friendId of args.friendIds) {
+      // Check if friend is already invited or participating
+      const existingInvitation = await ctx.db
+        .query("challengeInvitations")
+        .withIndex("by_challenge_invitee", (q) => 
+          q.eq("challengeId", args.challengeId).eq("inviteeId", friendId)
+        )
+        .first();
+
+      const existingParticipation = await ctx.db
+        .query("challengeParticipants")
+        .withIndex("by_challenge_user", (q) => 
+          q.eq("challengeId", args.challengeId).eq("userId", friendId)
+        )
+        .first();
+
+      if (!existingInvitation && !existingParticipation) {
+        const invitationId = await ctx.db.insert("challengeInvitations", {
+          challengeId: args.challengeId,
+          inviterId: args.inviterId,
+          inviteeId: friendId,
+          status: "pending",
+          createdAt: Date.now(),
+        });
+        invitations.push(invitationId);
+      }
+    }
+
+    return invitations;
+  },
+});
+
+// Get pending challenge invitations for a user
+export const getPendingChallengeInvitations = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const invitations = await ctx.db
+      .query("challengeInvitations")
+      .withIndex("by_invitee_status", (q) => 
+        q.eq("inviteeId", args.userId).eq("status", "pending")
+      )
+      .collect();
+
+    const invitationsWithDetails = await Promise.all(
+      invitations.map(async (invitation) => {
+        const challenge = await ctx.db.get(invitation.challengeId);
+        const inviter = await ctx.db.get(invitation.inviterId);
+        const invitee = await ctx.db.get(invitation.inviteeId);
+        return {
+          ...invitation,
+          challenge,
+          inviter,
+          invitee,
+        };
+      })
+    );
+
+    return invitationsWithDetails;
+  },
+});
+
+// Accept a challenge invitation
+export const acceptChallengeInvitation = mutation({
+  args: { invitationId: v.id("challengeInvitations") },
+  handler: async (ctx, args) => {
+    const invitation = await ctx.db.get(args.invitationId);
+    if (!invitation) {
+      throw new Error("Invitation not found");
+    }
+
+    if (invitation.status !== "pending") {
+      throw new Error("Invitation has already been responded to");
+    }
+
+    // Update invitation status
+    await ctx.db.patch(args.invitationId, {
+      status: "accepted",
+      respondedAt: Date.now(),
+    });
+
+    // Add user to challenge participants
+    await ctx.db.insert("challengeParticipants", {
+      challengeId: invitation.challengeId,
+      userId: invitation.inviteeId,
+      joinedAt: Date.now(),
+      totalPoints: 0,
+      streakCount: 0,
+      isActive: true,
+    });
+
+    return { success: true };
+  },
+});
+
+// Decline a challenge invitation
+export const declineChallengeInvitation = mutation({
+  args: { invitationId: v.id("challengeInvitations") },
+  handler: async (ctx, args) => {
+    const invitation = await ctx.db.get(args.invitationId);
+    if (!invitation) {
+      throw new Error("Invitation not found");
+    }
+
+    if (invitation.status !== "pending") {
+      throw new Error("Invitation has already been responded to");
+    }
+
+    await ctx.db.patch(args.invitationId, {
+      status: "declined",
+      respondedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+// Get friends who can be invited to a challenge
+export const getInvitableFriends = query({
+  args: { 
+    userId: v.id("users"),
+    challengeId: v.id("challenges"),
+  },
+  handler: async (ctx, args) => {
+    // Get user's accepted friends
+    const friendships = await ctx.db
+      .query("friends")
+      .withIndex("by_user_status", (q) => 
+        q.eq("userId", args.userId).eq("status", "accepted")
+      )
+      .collect();
+
+    const friendIds = friendships.map(f => f.friendId);
+
+    // Get friends who are not already invited or participating
+    const invitableFriends = [];
+    for (const friendId of friendIds) {
+      const existingInvitation = await ctx.db
+        .query("challengeInvitations")
+        .withIndex("by_challenge_invitee", (q) => 
+          q.eq("challengeId", args.challengeId).eq("inviteeId", friendId)
+        )
+        .first();
+
+      const existingParticipation = await ctx.db
+        .query("challengeParticipants")
+        .withIndex("by_challenge_user", (q) => 
+          q.eq("challengeId", args.challengeId).eq("userId", friendId)
+        )
+        .first();
+
+      if (!existingInvitation && !existingParticipation) {
+        const friend = await ctx.db.get(friendId);
+        if (friend) {
+          invitableFriends.push(friend);
+        }
+      }
+    }
+
+    return invitableFriends;
+  },
+});
+
+// Get pending invitations for a specific challenge (for challenge creator)
+export const getChallengePendingInvitations = query({
+  args: { challengeId: v.id("challenges") },
+  handler: async (ctx, args) => {
+    const invitations = await ctx.db
+      .query("challengeInvitations")
+      .withIndex("by_challenge", (q) => q.eq("challengeId", args.challengeId))
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .collect();
+
+    const invitationsWithDetails = await Promise.all(
+      invitations.map(async (invitation) => {
+        const inviter = await ctx.db.get(invitation.inviterId);
+        const invitee = await ctx.db.get(invitation.inviteeId);
+        return {
+          ...invitation,
+          inviter,
+          invitee,
+        };
+      })
+    );
+
+    return invitationsWithDetails;
+  },
+});
+
 

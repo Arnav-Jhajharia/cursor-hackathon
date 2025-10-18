@@ -55,6 +55,7 @@ export const createOrUpdateUser = mutation({
         totalPoints: 0,
         currentStreak: 0,
         longestStreak: 0,
+        rewardsBalance: 100, // Start with 100 rewards coins
         createdAt: now,
         updatedAt: now,
       });

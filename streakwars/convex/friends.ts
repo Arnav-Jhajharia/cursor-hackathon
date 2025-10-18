@@ -417,3 +417,25 @@ export const getPendingInvitations = query({
     return invitations;
   },
 });
+
+// Get accepted friends for a user
+export const getAcceptedFriends = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const friendships = await ctx.db
+      .query("friends")
+      .withIndex("by_user_status", (q) => 
+        q.eq("userId", args.userId).eq("status", "accepted")
+      )
+      .collect();
+
+    const friendsWithDetails = await Promise.all(
+      friendships.map(async (friendship) => {
+        const friend = await ctx.db.get(friendship.friendId);
+        return friend;
+      })
+    );
+
+    return friendsWithDetails.filter(Boolean);
+  },
+});

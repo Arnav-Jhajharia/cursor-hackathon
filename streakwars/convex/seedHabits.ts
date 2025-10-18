@@ -33,6 +33,7 @@ export const createSamplePublicHabits = mutation({
           totalPoints: 0,
           currentStreak: 0,
           longestStreak: 0,
+          rewardsBalance: 0,
           createdAt: now,
           updatedAt: now,
         });

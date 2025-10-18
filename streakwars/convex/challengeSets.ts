@@ -15,6 +15,29 @@ export const createDefaultChallenges = mutation({
       return { message: "Challenges already exist" };
     }
 
+    // Get or create system user
+    let systemUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", "system_user"))
+      .first();
+    
+    let systemUserId;
+    if (!systemUser) {
+      systemUserId = await ctx.db.insert("users", {
+        clerkId: "system_user",
+        name: "System",
+        email: "system@habituate.app",
+        totalPoints: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        rewardsBalance: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } else {
+      systemUserId = systemUser._id;
+    }
+
     const challenges = [
       {
         name: "30-Day Reading Challenge",
@@ -74,7 +97,11 @@ export const createDefaultChallenges = mutation({
 
     const createdChallenges = [];
     for (const challenge of challenges) {
-      const challengeId = await ctx.db.insert("challenges", challenge);
+      const challengeId = await ctx.db.insert("challenges", {
+        ...challenge,
+        prizeType: "none",
+        createdBy: systemUserId,
+      });
       createdChallenges.push(challengeId);
     }
 
