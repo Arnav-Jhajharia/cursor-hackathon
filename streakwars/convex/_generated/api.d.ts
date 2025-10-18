@@ -28,12 +28,12 @@ import type * as habitChallenges from "../habitChallenges.js";
 import type * as habitCompletions from "../habitCompletions.js";
 import type * as habitVerification from "../habitVerification.js";
 import type * as habits from "../habits.js";
-import type * as miniWars from "../miniWars.js";
 import type * as notifications from "../notifications.js";
 import type * as rewards from "../rewards.js";
 import type * as seedHabits from "../seedHabits.js";
 import type * as splitwise from "../splitwise.js";
 import type * as users from "../users.js";
+import type * as warPenalties from "../warPenalties.js";
 
 import type {
   ApiFromModules,
@@ -70,12 +70,12 @@ declare const fullApi: ApiFromModules<{
   habitCompletions: typeof habitCompletions;
   habitVerification: typeof habitVerification;
   habits: typeof habits;
-  miniWars: typeof miniWars;
   notifications: typeof notifications;
   rewards: typeof rewards;
   seedHabits: typeof seedHabits;
   splitwise: typeof splitwise;
   users: typeof users;
+  warPenalties: typeof warPenalties;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 

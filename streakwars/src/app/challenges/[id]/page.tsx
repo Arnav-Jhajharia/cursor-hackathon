@@ -12,6 +12,7 @@ import ChallengeShareModal from "../../../components/ChallengeShareModal";
 import WarDeclarationModal from "../../../components/WarDeclarationModal";
 import WarNotification from "../../../components/WarNotification";
 import ActiveWarDashboard from "../../../components/ActiveWarDashboard";
+import SabotageSystem from "../../../components/SabotageSystem";
 
 export default function ChallengeDetailPage() {
   const { user } = useUser();
@@ -319,11 +320,18 @@ export default function ChallengeDetailPage() {
             {activeWars
               .filter(war => war.challengeId === challengeId)
               .map((war) => (
-                <ActiveWarDashboard
-                  key={war._id}
-                  war={war}
-                  isChallenger={war.challengerId === currentUser._id}
-                />
+                <div key={war._id}>
+                  <ActiveWarDashboard
+                    war={war}
+                    isChallenger={war.challengerId === currentUser._id}
+                  />
+                  <SabotageSystem
+                    warId={war._id}
+                    challengeId={challengeId}
+                    userId={currentUser._id}
+                    isChallenger={war.challengerId === currentUser._id}
+                  />
+                </div>
               ))}
           </div>
         )}

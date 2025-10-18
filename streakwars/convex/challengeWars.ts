@@ -450,3 +450,140 @@ export const completeWar = mutation({
     };
   },
 });
+
+// SABOTAGE SYSTEM - Challenger can sabotage defender by doing extra habits
+export const startSabotage = mutation({
+  args: { 
+    warId: v.id("challengeWars"),
+    intensity: v.number(), // 1-5 intensity level
+  },
+  handler: async (ctx, args) => {
+    const war = await ctx.db.get(args.warId);
+    if (!war || war.status !== "accepted") {
+      throw new Error("War not found or not active");
+    }
+
+    if (args.intensity < 1 || args.intensity > 5) {
+      throw new Error("Sabotage intensity must be between 1-5");
+    }
+
+    const now = Date.now();
+    
+    // Update war with sabotage info
+    await ctx.db.patch(args.warId, {
+      sabotageActive: true,
+      sabotageStartedAt: now,
+      sabotageIntensity: args.intensity,
+      sabotageHabitsCompleted: 0,
+      sabotagePenaltiesApplied: 0,
+    });
+
+    return {
+      message: `🔥 SABOTAGE ACTIVATED! Intensity level ${args.intensity}/5`,
+      intensity: args.intensity,
+      sabotageStartedAt: now,
+    };
+  },
+});
+
+export const recordSabotageHabit = mutation({
+  args: { 
+    warId: v.id("challengeWars"),
+    habitId: v.id("habits"),
+    points: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const war = await ctx.db.get(args.warId);
+    if (!war || !war.sabotageActive) {
+      throw new Error("Sabotage not active for this war");
+    }
+
+    const currentCount = war.sabotageHabitsCompleted || 0;
+    const newCount = currentCount + 1;
+    
+    // Update sabotage progress
+    await ctx.db.patch(args.warId, {
+      sabotageHabitsCompleted: newCount,
+    });
+
+    // Calculate penalties for defender based on intensity
+    const intensity = war.sabotageIntensity || 1;
+    const penaltiesToApply = Math.floor(newCount / (6 - intensity)); // More intensity = fewer habits needed for penalties
+
+    if (penaltiesToApply > (war.sabotagePenaltiesApplied || 0)) {
+      // Apply new penalties to defender
+      await ctx.db.patch(args.warId, {
+        sabotagePenaltiesApplied: penaltiesToApply,
+      });
+
+      return {
+        message: `💀 SABOTAGE HABIT #${newCount} COMPLETED!`,
+        sabotageCount: newCount,
+        penaltiesApplied: penaltiesToApply,
+        intensity: intensity,
+        nextPenaltyAt: Math.ceil((newCount + 1) / (6 - intensity)) * (6 - intensity),
+      };
+    }
+
+    return {
+      message: `🔥 Sabotage habit #${newCount} completed!`,
+      sabotageCount: newCount,
+      penaltiesApplied: penaltiesToApply,
+      intensity: intensity,
+    };
+  },
+});
+
+export const endSabotage = mutation({
+  args: { warId: v.id("challengeWars") },
+  handler: async (ctx, args) => {
+    const war = await ctx.db.get(args.warId);
+    if (!war || !war.sabotageActive) {
+      throw new Error("Sabotage not active for this war");
+    }
+
+    const now = Date.now();
+    const sabotageDuration = now - (war.sabotageStartedAt || now);
+    const totalHabits = war.sabotageHabitsCompleted || 0;
+    const totalPenalties = war.sabotagePenaltiesApplied || 0;
+
+    // End sabotage
+    await ctx.db.patch(args.warId, {
+      sabotageActive: false,
+    });
+
+    return {
+      message: `🏁 SABOTAGE COMPLETE!`,
+      duration: sabotageDuration,
+      totalHabits: totalHabits,
+      totalPenalties: totalPenalties,
+      intensity: war.sabotageIntensity,
+    };
+  },
+});
+
+export const getActiveSabotage = query({
+  args: { 
+    userId: v.id("users"),
+    challengeId: v.id("challenges"),
+  },
+  handler: async (ctx, args) => {
+    // Find active sabotage where user is either challenger or defender
+    const activeWars = await ctx.db
+      .query("challengeWars")
+      .withIndex("by_challenge", (q) => q.eq("challengeId", args.challengeId))
+      .filter((q) => 
+        q.and(
+          q.or(
+            q.eq(q.field("challengerId"), args.userId),
+            q.eq(q.field("defenderId"), args.userId)
+          ),
+          q.eq(q.field("status"), "accepted"),
+          q.eq(q.field("sabotageActive"), true)
+        )
+      )
+      .collect();
+
+    return activeWars.length > 0 ? activeWars[0] : null;
+  },
+});

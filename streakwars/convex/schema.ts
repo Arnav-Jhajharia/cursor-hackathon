@@ -172,6 +172,12 @@ export default defineSchema({
     warEndedAt: v.optional(v.number()),
     winnerId: v.optional(v.id("users")),
     loserId: v.optional(v.id("users")),
+    // Sabotage system
+    sabotageActive: v.optional(v.boolean()), // Is sabotage currently active?
+    sabotageStartedAt: v.optional(v.number()),
+    sabotageIntensity: v.optional(v.number()), // 1-5 intensity level
+    sabotageHabitsCompleted: v.optional(v.number()), // How many extra habits challenger did
+    sabotagePenaltiesApplied: v.optional(v.number()), // How many penalties applied to defender
     createdAt: v.number(),
     expiresAt: v.number(), // 24 hours to accept
   })
