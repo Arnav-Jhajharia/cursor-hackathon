@@ -49,11 +49,46 @@ export default defineSchema({
     completedAt: v.number(), // Timestamp of completion
     pointsEarned: v.number(),
     notes: v.optional(v.string()),
+    // Verification fields
+    verificationStatus: v.optional(v.union(v.literal("none"), v.literal("pending"), v.literal("verified"), v.literal("rejected"))),
+    verificationType: v.optional(v.union(v.literal("photo"), v.literal("reading"))),
+    verificationData: v.optional(v.object({
+      // For photo verification
+      imageUrl: v.optional(v.string()),
+      // For reading verification
+      bookName: v.optional(v.string()),
+      pageRange: v.optional(v.string()),
+      summary: v.optional(v.string()),
+    })),
+    verificationResult: v.optional(v.object({
+      verified: v.boolean(),
+      confidence: v.number(),
+      reason: v.string(),
+      verifiedAt: v.number(),
+    })),
+    requiresVerification: v.optional(v.boolean()),
+    auditReason: v.optional(v.string()),
   })
     .index("by_habit", ["habitId"])
     .index("by_user", ["userId"])
     .index("by_habit_date", ["habitId", "completedAt"])
-    .index("by_user_date", ["userId", "completedAt"]),
+    .index("by_user_date", ["userId", "completedAt"])
+    .index("by_verification_status", ["verificationStatus"])
+    .index("by_requires_verification", ["requiresVerification"]),
+
+  // Habit challenges table - tracks challenges to habit completions
+  habitChallenges: defineTable({
+    completionId: v.id("habitCompletions"),
+    challengerId: v.id("users"),
+    reason: v.string(),
+    status: v.union(v.literal("pending"), v.literal("upheld"), v.literal("dismissed")),
+    resolvedAt: v.optional(v.number()),
+    adminNotes: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_completion", ["completionId"])
+    .index("by_challenger", ["challengerId"])
+    .index("by_status", ["status"]),
 
   // Challenges table - stores monthly challenges
   challenges: defineTable({
