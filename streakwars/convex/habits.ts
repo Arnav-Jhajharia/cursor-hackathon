@@ -43,9 +43,23 @@ export const createHabit = mutation({
     targetFrequency: v.string(),
     customFrequency: v.optional(v.string()),
     pointsPerCompletion: v.number(),
+    isPublic: v.optional(v.boolean()),
+    originalHabitId: v.optional(v.id("habits")),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    
+    // If this is a remix, increment the remix count of the original habit
+    if (args.originalHabitId) {
+      const originalHabit = await ctx.db.get(args.originalHabitId);
+      if (originalHabit) {
+        await ctx.db.patch(originalHabit._id, {
+          remixCount: (originalHabit.remixCount || 0) + 1,
+          updatedAt: now,
+        });
+      }
+    }
+    
     return await ctx.db.insert("habits", {
       userId: args.userId,
       name: args.name,
@@ -55,6 +69,9 @@ export const createHabit = mutation({
       customFrequency: args.customFrequency,
       pointsPerCompletion: args.pointsPerCompletion,
       isActive: true,
+      isPublic: args.isPublic || false,
+      originalHabitId: args.originalHabitId,
+      remixCount: 0,
       createdAt: now,
       updatedAt: now,
     });
@@ -197,6 +214,80 @@ export const getHabitStreak = query({
     }
 
     return streak;
+  },
+});
+
+// Get public habits that can be remixed
+export const getPublicHabits = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const habits = await ctx.db
+      .query("habits")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("isActive"), true),
+          q.eq(q.field("isPublic"), true)
+        )
+      )
+      .order("desc")
+      .take(args.limit || 50);
+
+    // Get user details for each habit
+    const habitsWithUsers = await Promise.all(
+      habits.map(async (habit) => {
+        const user = await ctx.db.get(habit.userId);
+        return {
+          ...habit,
+          user,
+        };
+      })
+    );
+
+    return habitsWithUsers;
+  },
+});
+
+// Remix a public habit
+export const remixHabit = mutation({
+  args: {
+    userId: v.id("users"),
+    originalHabitId: v.id("habits"),
+    customizations: v.optional(v.object({
+      name: v.optional(v.string()),
+      description: v.optional(v.string()),
+      pointsPerCompletion: v.optional(v.number()),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const originalHabit = await ctx.db.get(args.originalHabitId);
+    if (!originalHabit || !originalHabit.isPublic) {
+      throw new Error("Habit not found or not available for remixing");
+    }
+
+    const now = Date.now();
+    
+    // Increment remix count of original habit
+    await ctx.db.patch(originalHabit._id, {
+      remixCount: (originalHabit.remixCount || 0) + 1,
+      updatedAt: now,
+    });
+
+    // Create the remixed habit
+    return await ctx.db.insert("habits", {
+      userId: args.userId,
+      name: args.customizations?.name || originalHabit.name,
+      description: args.customizations?.description || originalHabit.description,
+      category: originalHabit.category,
+      targetFrequency: originalHabit.targetFrequency,
+      customFrequency: originalHabit.customFrequency,
+      pointsPerCompletion: args.customizations?.pointsPerCompletion || originalHabit.pointsPerCompletion,
+      isActive: true,
+      isPublic: false, // Remixed habits are private by default
+      originalHabitId: args.originalHabitId,
+      remixCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
   },
 });
 

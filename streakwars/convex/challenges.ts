@@ -43,17 +43,21 @@ export const createChallenge = mutation({
   args: {
     name: v.string(),
     description: v.string(),
-    startDate: v.number(),
-    endDate: v.number(),
-    targetHabits: v.array(v.id("habits")),
+    duration: v.number(), // Duration in days
+    prize: v.optional(v.string()),
+    targetHabits: v.array(v.string()), // Changed to strings for now
+    createdBy: v.id("users"),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    const startDate = now;
+    const endDate = now + (args.duration * 24 * 60 * 60 * 1000); // Convert days to milliseconds
+    
     return await ctx.db.insert("challenges", {
       name: args.name,
       description: args.description,
-      startDate: args.startDate,
-      endDate: args.endDate,
+      startDate: startDate,
+      endDate: endDate,
       targetHabits: args.targetHabits,
       isActive: true,
       createdAt: now,
@@ -216,6 +220,107 @@ export const updateChallengeParticipantStats = mutation({
         streakCount: args.newStreakCount,
       });
     }
+  },
+});
+
+// Get user's active challenges
+export const getUserActiveChallenges = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    
+    // Get user's active participations
+    const participations = await ctx.db
+      .query("challengeParticipants")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    // Get challenge details and filter for active challenges
+    const activeChallenges = await Promise.all(
+      participations.map(async (participation) => {
+        const challenge = await ctx.db.get(participation.challengeId);
+        if (!challenge || !challenge.isActive || challenge.endDate < now) {
+          return null;
+        }
+
+        // Get all participants for this challenge
+        const allParticipants = await ctx.db
+          .query("challengeParticipants")
+          .withIndex("by_challenge_active", (q) => 
+            q.eq("challengeId", challenge._id).eq("isActive", true)
+          )
+          .collect();
+
+        // Calculate user's rank
+        const sortedParticipants = allParticipants.sort((a, b) => b.totalPoints - a.totalPoints);
+        const userRank = sortedParticipants.findIndex(p => p.userId === args.userId) + 1;
+
+        // Calculate days remaining
+        const daysRemaining = Math.ceil((challenge.endDate - now) / (24 * 60 * 60 * 1000));
+
+        return {
+          ...challenge,
+          userPoints: participation.totalPoints,
+          userRank: userRank,
+          participants: allParticipants,
+          daysRemaining: daysRemaining,
+        };
+      })
+    );
+
+    return activeChallenges.filter(challenge => challenge !== null);
+  },
+});
+
+// Get available challenges (not joined by user)
+export const getAvailableChallenges = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    
+    // Get all active challenges
+    const allChallenges = await ctx.db
+      .query("challenges")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .filter((q) => q.gte(q.field("endDate"), now))
+      .collect();
+
+    // Get user's participations
+    const userParticipations = await ctx.db
+      .query("challengeParticipants")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    const userChallengeIds = new Set(userParticipations.map(p => p.challengeId));
+
+    // Filter out challenges user is already participating in
+    const availableChallenges = allChallenges.filter(challenge => 
+      !userChallengeIds.has(challenge._id)
+    );
+
+    // Get participant counts for each challenge
+    const challengesWithDetails = await Promise.all(
+      availableChallenges.map(async (challenge) => {
+        const participants = await ctx.db
+          .query("challengeParticipants")
+          .withIndex("by_challenge_active", (q) => 
+            q.eq("challengeId", challenge._id).eq("isActive", true)
+          )
+          .collect();
+
+        const duration = Math.ceil((challenge.endDate - challenge.startDate) / (24 * 60 * 60 * 1000));
+
+        return {
+          ...challenge,
+          participants: participants,
+          duration: duration,
+        };
+      })
+    );
+
+    return challengesWithDetails;
   },
 });
 

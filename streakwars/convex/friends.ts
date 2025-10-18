@@ -110,6 +110,7 @@ export const acceptFriendRequest = mutation({
     friendId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    // Find the friend request where the friend sent a request to the current user
     const friendship = await ctx.db
       .query("friends")
       .withIndex("by_user_friend", (q) => 
@@ -148,6 +149,28 @@ export const acceptFriendRequest = mutation({
       data: { userId: args.userId },
       createdAt: now,
     });
+  },
+});
+
+// Cancel outgoing friend request
+export const cancelFriendRequest = mutation({
+  args: {
+    userId: v.id("users"),
+    friendId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const friendship = await ctx.db
+      .query("friends")
+      .withIndex("by_user_friend", (q) => 
+        q.eq("userId", args.userId).eq("friendId", args.friendId)
+      )
+      .first();
+
+    if (!friendship || friendship.status !== "pending") {
+      throw new Error("Friend request not found");
+    }
+
+    await ctx.db.delete(friendship._id);
   },
 });
 
@@ -251,6 +274,61 @@ export const getPendingFriendRequests = query({
   },
 });
 
+// Debug function to check all friends data
+export const debugFriendsData = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const allFriends = await ctx.db
+      .query("friends")
+      .collect();
+    
+    const userFriends = await ctx.db
+      .query("friends")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+    
+    const pendingRequests = await ctx.db
+      .query("friends")
+      .withIndex("by_friend", (q) => q.eq("friendId", args.userId))
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .collect();
+    
+    return {
+      allFriends: allFriends.length,
+      userFriends: userFriends.length,
+      pendingRequests: pendingRequests.length,
+      userFriendsData: userFriends,
+      pendingRequestsData: pendingRequests,
+      allFriendsData: allFriends,
+      userFriendsAccepted: userFriends.filter(f => f.status === "accepted").length,
+      userFriendsPending: userFriends.filter(f => f.status === "pending").length,
+    };
+  },
+});
+
+// Clear all friends data (for debugging)
+export const clearAllFriendsData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Delete all friends records
+    const allFriends = await ctx.db.query("friends").collect();
+    for (const friend of allFriends) {
+      await ctx.db.delete(friend._id);
+    }
+    
+    // Delete all pending invitations
+    const allInvitations = await ctx.db.query("pendingInvitations").collect();
+    for (const invitation of allInvitations) {
+      await ctx.db.delete(invitation._id);
+    }
+    
+    return { 
+      deletedFriends: allFriends.length, 
+      deletedInvitations: allInvitations.length 
+    };
+  },
+});
+
 // Get friend suggestions (users with similar habits)
 export const getFriendSuggestions = query({
   args: { userId: v.id("users") },
@@ -299,6 +377,30 @@ export const getFriendSuggestions = query({
     }
 
     return suggestions.sort((a, b) => b.score - a.score).slice(0, 10);
+  },
+});
+
+// Get pending friend requests sent by user (outgoing requests)
+export const getOutgoingFriendRequests = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const requests = await ctx.db
+      .query("friends")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .collect();
+
+    const requestsWithUsers = await Promise.all(
+      requests.map(async (request) => {
+        const friend = await ctx.db.get(request.friendId);
+        return {
+          ...request,
+          friend,
+        };
+      })
+    );
+
+    return requestsWithUsers;
   },
 });
 

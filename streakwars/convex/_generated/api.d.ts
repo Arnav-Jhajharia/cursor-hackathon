@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as challengeSets from "../challengeSets.js";
 import type * as challenges from "../challenges.js";
 import type * as cronHandlers from "../cronHandlers.js";
 import type * as crons from "../crons.js";
@@ -33,6 +34,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  challengeSets: typeof challengeSets;
   challenges: typeof challenges;
   cronHandlers: typeof cronHandlers;
   crons: typeof crons;

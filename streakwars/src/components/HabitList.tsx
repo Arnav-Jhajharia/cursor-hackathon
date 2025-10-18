@@ -19,11 +19,11 @@ export default function HabitList({ userId }: HabitListProps) {
 
   if (!habits) {
     return (
-      <div className="p-6 space-y-4">
+      <div className="p-5 space-y-3">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-gray-50 rounded-2xl p-4 animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 animate-pulse">
+            <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
+            <div className="h-3 bg-slate-100 rounded w-1/2"></div>
           </div>
         ))}
       </div>
@@ -32,10 +32,9 @@ export default function HabitList({ userId }: HabitListProps) {
 
   if (habits.length === 0) {
     return (
-      <div className="p-6 text-center">
-        <div className="text-6xl mb-4 opacity-50">🎯</div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">No habits yet</h3>
-        <p className="text-gray-500 text-sm">Create your first habit to start building amazing streaks!</p>
+      <div className="p-8 text-center">
+        <h3 className="text-lg font-semibold text-slate-700 mb-2">No habits yet</h3>
+        <p className="text-slate-500 text-sm">Create your first habit to start building streaks</p>
       </div>
     );
   }
@@ -65,62 +64,55 @@ export default function HabitList({ userId }: HabitListProps) {
   };
 
   return (
-    <div className="p-6 space-y-3">
+    <div className="p-5 space-y-3">
       {habits.map((habit) => {
         const completed = isCompletedToday(habit._id);
         const loading = loadingHabits.has(habit._id);
-        
+
         return (
           <div
             key={habit._id}
-            className={`rounded-2xl p-4 transition-all duration-300 ${
+            className={`rounded-lg p-4 transition-all duration-200 ${
               completed
-                ? "bg-gray-100 border border-gray-200"
-                : "bg-gray-50 border border-gray-100 hover:bg-gray-100"
+                ? "bg-indigo-50 border border-indigo-200"
+                : "bg-white border border-slate-200 hover:border-slate-300"
             }`}
           >
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => handleToggleCompletion(habit._id)}
                 disabled={loading}
-                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                className={`w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${
                   completed
-                    ? "bg-gray-800 border-gray-800 text-white shadow-lg"
-                    : "border-gray-300 hover:border-gray-500 hover:bg-gray-100"
+                    ? "bg-indigo-600 border-indigo-600 text-white"
+                    : "border-slate-300 hover:border-indigo-500"
                 } ${loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
               >
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 ) : completed ? (
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                   </svg>
                 ) : null}
               </button>
-              
-              <div className="flex-1">
-                <h3 className={`font-semibold text-base ${completed ? "text-gray-800" : "text-gray-900"}`}>
+
+              <div className="flex-1 min-w-0">
+                <h3 className={`font-semibold text-base truncate ${completed ? "text-slate-700" : "text-slate-900"}`}>
                   {habit.name}
                 </h3>
                 {habit.description && (
-                  <p className={`text-sm mt-1 ${completed ? "text-gray-600" : "text-gray-500"}`}>
+                  <p className={`text-sm mt-0.5 truncate ${completed ? "text-slate-500" : "text-slate-600"}`}>
                     {habit.description}
                   </p>
                 )}
               </div>
-              
-              <div className="flex items-center space-x-3">
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 font-medium">Points</div>
-                  <div className="font-bold text-lg text-gray-800">
+
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="text-right">
+                  <div className="text-xs text-slate-500 font-medium">Points</div>
+                  <div className="font-bold text-lg text-indigo-600">
                     {habit.pointsPerCompletion}
-                  </div>
-                </div>
-                
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 font-medium">Category</div>
-                  <div className="text-sm font-semibold text-gray-700 capitalize">
-                    {habit.category}
                   </div>
                 </div>
               </div>

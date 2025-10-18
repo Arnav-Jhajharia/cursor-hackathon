@@ -27,11 +27,16 @@ export default defineSchema({
     customFrequency: v.optional(v.string()), // For custom frequencies
     pointsPerCompletion: v.number(), // Points awarded per completion
     isActive: v.boolean(),
+    isPublic: v.optional(v.boolean()), // Whether this habit can be remixed by others
+    originalHabitId: v.optional(v.id("habits")), // If this is a remix, reference to original
+    remixCount: v.optional(v.number()), // How many times this habit has been remixed
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_user_active", ["userId", "isActive"]),
+    .index("by_user_active", ["userId", "isActive"])
+    .index("by_public", ["isPublic"])
+    .index("by_original", ["originalHabitId"]),
 
   // Habit completions table - tracks when habits are completed
   habitCompletions: defineTable({
@@ -52,7 +57,7 @@ export default defineSchema({
     description: v.string(),
     startDate: v.number(), // Start of the month
     endDate: v.number(), // End of the month
-    targetHabits: v.array(v.id("habits")), // Habits that count for this challenge
+    targetHabits: v.array(v.string()), // Habits that count for this challenge
     isActive: v.boolean(),
     createdAt: v.number(),
   })

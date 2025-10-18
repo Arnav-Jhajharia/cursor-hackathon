@@ -72,14 +72,14 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Add New Habit</h2>
+            <h2 className="text-2xl font-bold text-slate-900">Add New Habit</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-slate-400 hover:text-slate-600 transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -87,10 +87,10 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Habit Name *
+              <label htmlFor="name" className="block text-sm font-semibold text-slate-700 mb-2">
+                Habit Name
               </label>
               <input
                 type="text"
@@ -99,13 +99,13 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="e.g., Drink 8 glasses of water"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                placeholder="e.g., Exercise for 30 minutes"
               />
             </div>
 
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="description" className="block text-sm font-semibold text-slate-700 mb-2">
                 Description
               </label>
               <textarea
@@ -114,14 +114,14 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
                 value={formData.description}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Optional description of your habit"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
+                placeholder="Optional details about your habit"
               />
             </div>
 
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-                Category *
+              <label htmlFor="category" className="block text-sm font-semibold text-slate-700 mb-2">
+                Category
               </label>
               <select
                 id="category"
@@ -129,7 +129,7 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
                 value={formData.category}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-white"
               >
                 {categories.map((category) => (
                   <option key={category} value={category}>
@@ -140,8 +140,8 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
             </div>
 
             <div>
-              <label htmlFor="targetFrequency" className="block text-sm font-medium text-gray-700 mb-1">
-                Frequency *
+              <label htmlFor="targetFrequency" className="block text-sm font-semibold text-slate-700 mb-2">
+                Frequency
               </label>
               <select
                 id="targetFrequency"
@@ -149,7 +149,7 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
                 value={formData.targetFrequency}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-white"
               >
                 {frequencies.map((freq) => (
                   <option key={freq.value} value={freq.value}>
@@ -161,8 +161,8 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
 
             {formData.targetFrequency === "custom" && (
               <div>
-                <label htmlFor="customFrequency" className="block text-sm font-medium text-gray-700 mb-1">
-                  Custom Frequency *
+                <label htmlFor="customFrequency" className="block text-sm font-semibold text-slate-700 mb-2">
+                  Custom Frequency
                 </label>
                 <input
                   type="text"
@@ -171,15 +171,15 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
                   value={formData.customFrequency}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   placeholder="e.g., 3 times per week"
                 />
               </div>
             )}
 
             <div>
-              <label htmlFor="pointsPerCompletion" className="block text-sm font-medium text-gray-700 mb-1">
-                Points per Completion *
+              <label htmlFor="pointsPerCompletion" className="block text-sm font-semibold text-slate-700 mb-2">
+                Points per Completion
               </label>
               <input
                 type="number"
@@ -190,22 +190,22 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
                 required
                 min="1"
                 max="100"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
             </div>
 
-            <div className="flex space-x-3 pt-4">
+            <div className="flex gap-3 pt-4">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition-all"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 {isSubmitting ? "Creating..." : "Create Habit"}
               </button>

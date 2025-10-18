@@ -15,11 +15,11 @@ export default function StatsOverview({ userId }: StatsOverviewProps) {
 
   if (!user || !completionStats) {
     return (
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white rounded-2xl p-4 shadow-lg animate-pulse">
-            <div className="h-3 bg-gray-200 rounded w-3/4 mb-3"></div>
-            <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+          <div key={i} className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm animate-pulse">
+            <div className="h-3 bg-slate-200 rounded w-3/4 mb-3"></div>
+            <div className="h-6 bg-slate-200 rounded w-1/2"></div>
           </div>
         ))}
       </div>
@@ -28,46 +28,34 @@ export default function StatsOverview({ userId }: StatsOverviewProps) {
 
   const stats = [
     {
-      title: "Points",
+      title: "Total Points",
       value: user.totalPoints,
-      icon: "🏆",
-      gradient: "from-gray-600 to-gray-800",
-      bgColor: "bg-gray-50",
     },
     {
-      title: "Streak",
-      value: user.currentStreak,
-      icon: "🔥",
-      gradient: "from-gray-600 to-gray-800",
-      bgColor: "bg-gray-50",
+      title: "Current Streak",
+      value: `${user.currentStreak} days`,
     },
     {
-      title: "Best",
-      value: user.longestStreak,
-      icon: "⭐",
-      gradient: "from-gray-600 to-gray-800",
-      bgColor: "bg-gray-50",
+      title: "Best Streak",
+      value: `${user.longestStreak} days`,
     },
     {
       title: "Today",
-      value: todayCompletions?.length || 0,
-      icon: "✅",
-      gradient: "from-gray-600 to-gray-800",
-      bgColor: "bg-gray-50",
+      value: `${todayCompletions?.length || 0} done`,
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {stats.map((stat, index) => (
-        <div key={index} className={`${stat.bgColor} rounded-2xl p-4 shadow-lg border border-white/50`}>
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-2xl">{stat.icon}</div>
-            <div className={`text-xs font-semibold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}>
-              {stat.title}
-            </div>
+        <div
+          key={index}
+          className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm"
+        >
+          <div className="text-xs font-medium text-slate-500 mb-1">
+            {stat.title}
           </div>
-          <div className={`text-2xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}>
+          <div className="text-2xl font-bold text-slate-900">
             {stat.value}
           </div>
         </div>

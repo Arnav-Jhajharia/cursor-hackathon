@@ -9,6 +9,7 @@ import {
   UserButton,
 } from "@clerk/nextjs";
 import Providers from "../components/Providers";
+import Navigation from "../components/Navigation";
 import "./globals.css";
 
 const buttonStyles = `
@@ -51,27 +52,16 @@ export default function RootLayout({
         <head>
           <style dangerouslySetInnerHTML={{ __html: buttonStyles }} />
         </head>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-          suppressHydrationWarning
-        >
-          <SignedIn>
-            <header className="border-b border-gray-200 bg-white">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-16">
-                  <div className="flex items-center">
-                    <h1 className="text-xl font-bold text-gray-900">habituate</h1>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <UserButton />
-                  </div>
-                </div>
-              </div>
-            </header>
-          </SignedIn>
-          <main className="min-h-screen bg-gray-50">
-            <Providers>{children}</Providers>
-          </main>
+                 <body
+                   className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+                   suppressHydrationWarning
+                 >
+                   <SignedIn>
+                     <Navigation />
+                   </SignedIn>
+                   <main className="min-h-screen pb-20">
+                     <Providers>{children}</Providers>
+                   </main>
         </body>
       </html>
     </ClerkProvider>
