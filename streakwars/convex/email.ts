@@ -2,7 +2,8 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend only if API key is available
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 export const sendInvitationEmail = internalAction({
   args: {
@@ -12,6 +13,12 @@ export const sendInvitationEmail = internalAction({
   },
   handler: async (ctx, args) => {
     const { toEmail, fromUserName, fromUserEmail } = args;
+
+    // Check if Resend is available
+    if (!resend) {
+      console.log("Resend not configured, skipping email send");
+      return { success: false, error: "Email service not configured" };
+    }
 
     const emailHtml = `
       <!DOCTYPE html>

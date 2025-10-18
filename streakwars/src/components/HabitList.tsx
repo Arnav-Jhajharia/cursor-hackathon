@@ -5,65 +5,21 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import ConfidenceBar from "./ConfidenceBar";
+import HabitVerificationSystem from "./HabitVerificationSystem";
 import VerificationModal from "./VerificationModal";
 
 interface HabitListProps {
   userId: Id<"users">;
 }
 
-// Confetti animation component
-const ConfettiAnimation = ({ show }: { show: boolean }) => {
-  if (!show) return null;
-
-  return (
-    <div className="fixed inset-0 pointer-events-none z-50">
-      {[...Array(30)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute animate-confetti"
-          style={{
-            left: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 1}s`,
-            animationDuration: `${1.5 + Math.random() * 1}s`,
-          }}
-        >
-          <div
-            className="w-1.5 h-1.5 rounded-full"
-            style={{
-              backgroundColor: ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1'][Math.floor(Math.random() * 4)],
-            }}
-          />
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// Coin animation component
-const CoinAnimation = ({ show, points }: { show: boolean; points: number }) => {
-  if (!show) return null;
-
-  return (
-    <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
-      <div className="animate-coin-bounce bg-yellow-500 text-white font-semibold text-sm px-3 py-1 rounded-full shadow-lg">
-        +{points} 🪙
-      </div>
-    </div>
-  );
-};
 
 export default function HabitList({ userId }: HabitListProps) {
   const router = useRouter();
   const habits = useQuery(api.habits.getUserHabitsWithChallenges, { userId });
   const todayCompletions = useQuery(api.habitCompletions.getTodayCompletions, { userId });
-  const completeHabit = useMutation(api.habitCompletions.completeHabit);
   const undoCompletion = useMutation(api.habitCompletions.undoHabitCompletion);
 
   const [loadingHabits, setLoadingHabits] = useState<Set<string>>(new Set());
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [showCoin, setShowCoin] = useState(false);
-  const [coinPoints, setCoinPoints] = useState(0);
   const [verificationModal, setVerificationModal] = useState<{
     isOpen: boolean;
     completionId: Id<"habitCompletions"> | null;
@@ -74,23 +30,6 @@ export default function HabitList({ userId }: HabitListProps) {
     habitName: "",
   });
 
-  // Trigger haptic feedback
-  const triggerHaptic = () => {
-    if ('vibrate' in navigator) {
-      navigator.vibrate(30);
-    }
-  };
-
-  // Play completion sound
-  const playCompletionSound = () => {
-    try {
-      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
-      audio.volume = 0.2;
-      audio.play().catch(() => {});
-    } catch (e) {
-      // Ignore audio errors
-    }
-  };
 
   const isCompletedToday = (habitId: string) => {
     return todayCompletions?.some(completion => completion.habitId === habitId) ?? false;
@@ -100,40 +39,18 @@ export default function HabitList({ userId }: HabitListProps) {
     return todayCompletions?.find(completion => completion.habitId === habitId);
   };
 
-  const handleToggleCompletion = async (habitId: string) => {
+  const handleUndoCompletion = async (habitId: string) => {
     if (loadingHabits.has(habitId)) return;
-
-    const completed = isCompletedToday(habitId);
-    const habit = habits?.find(h => h._id === habitId);
     
     setLoadingHabits(prev => new Set(prev).add(habitId));
 
     try {
-      if (completed) {
-        const completion = getTodayCompletion(habitId);
-        if (completion) {
-          await undoCompletion({ completionId: completion._id });
-        }
-      } else {
-        await completeHabit({ habitId: habitId as Id<"habits">, userId });
-        
-        // Trigger animations and feedback
-        if (habit) {
-          triggerHaptic();
-          playCompletionSound();
-          setCoinPoints(habit.pointsPerCompletion);
-          setShowCoin(true);
-          setShowConfetti(true);
-          
-          // Hide animations after delay
-          setTimeout(() => {
-            setShowConfetti(false);
-            setShowCoin(false);
-          }, 1500);
-        }
+      const completion = getTodayCompletion(habitId);
+      if (completion) {
+        await undoCompletion({ completionId: completion._id });
       }
     } catch (error) {
-      console.error("Error toggling habit completion:", error);
+      console.error("Error undoing habit completion:", error);
     } finally {
       setLoadingHabits(prev => {
         const newSet = new Set(prev);
@@ -258,26 +175,20 @@ export default function HabitList({ userId }: HabitListProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Quick Complete Button - only show if not completed */}
+                  {/* Verification System - only show if not completed */}
                   {!isCompletedToday(habit._id) && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleCompletion(habit._id);
-                      }}
-                      disabled={loading}
-                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 transform active:scale-95 ${
-                        loading
-                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                          : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md"
-                      }`}
-                    >
-                      {loading ? (
-                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                      ) : (
-                        "Complete"
-                      )}
-                    </button>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <HabitVerificationSystem
+                        habitId={habit._id}
+                        userId={userId}
+                        habitName={habit.name}
+                        habitCategory={habit.category}
+                        onVerificationComplete={() => {
+                          // Refresh the data
+                          window.location.reload();
+                        }}
+                      />
+                    </div>
                   )}
 
                   {/* Completed indicator */}
@@ -351,7 +262,7 @@ export default function HabitList({ userId }: HabitListProps) {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleToggleCompletion(habit._id);
+                      handleUndoCompletion(habit._id);
                     }}
                     disabled={loading}
                     className={`px-3 py-1 rounded-lg font-medium text-xs transition-all duration-200 ${
@@ -389,9 +300,6 @@ export default function HabitList({ userId }: HabitListProps) {
         )}
       </div>
 
-      {/* Animations */}
-      <ConfettiAnimation show={showConfetti} />
-      <CoinAnimation show={showCoin} points={coinPoints} />
 
       {/* Verification Modal */}
       <VerificationModal
@@ -401,42 +309,6 @@ export default function HabitList({ userId }: HabitListProps) {
         onClose={() => setVerificationModal({ isOpen: false, completionId: null, habitName: "" })}
       />
 
-      {/* Custom CSS for animations */}
-      <style jsx>{`
-        @keyframes confetti {
-          0% {
-            transform: translateY(-100vh) rotate(0deg);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(100vh) rotate(360deg);
-            opacity: 0;
-          }
-        }
-        
-        @keyframes coin-bounce {
-          0% {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-          }
-          50% {
-            transform: translateY(-30px) scale(1.1);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(0) scale(1);
-            opacity: 0;
-          }
-        }
-        
-        .animate-confetti {
-          animation: confetti linear forwards;
-        }
-        
-        .animate-coin-bounce {
-          animation: coin-bounce 1.5s ease-out forwards;
-        }
-      `}</style>
     </>
   );
 }

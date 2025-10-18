@@ -233,6 +233,156 @@ export const completeHabit = mutation({
   },
 });
 
+// Complete habit and check for streak breaks/milestones
+export const completeHabitWithConfessional = mutation({
+  args: {
+    habitId: v.id("habits"),
+    userId: v.id("users"),
+    points: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    
+    // Get the habit
+    const habit = await ctx.db.get(args.habitId);
+    if (!habit) {
+      throw new Error("Habit not found");
+    }
+
+    // Get user's completions for this habit
+    const completions = await ctx.db
+      .query("habitCompletions")
+      .withIndex("by_habit", (q) => q.eq("habitId", args.habitId))
+      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .order("desc")
+      .collect();
+
+    // Calculate current streak
+    const currentStreak = calculateStreak(completions, now);
+    
+    // Check if this is a milestone (7, 30, 100 days)
+    const milestones = [7, 30, 100];
+    const isMilestone = milestones.includes(currentStreak + 1);
+    
+    // Complete the habit
+    const result = await ctx.runMutation("habits:completeHabit", {
+      habitId: args.habitId,
+      userId: args.userId,
+      points: args.points,
+    });
+
+    // Trigger anti-confessional for milestones
+    if (isMilestone) {
+      await ctx.runMutation("confessional:triggerAntiConfessional", {
+        userId: args.userId,
+        habitId: args.habitId,
+        habitName: habit.name,
+        streakLength: currentStreak + 1,
+        milestone: `${currentStreak + 1} days`
+      });
+    }
+
+    return { 
+      ...result, 
+      currentStreak: currentStreak + 1,
+      isMilestone,
+      milestone: isMilestone ? `${currentStreak + 1} days` : null
+    };
+  },
+});
+
+// Check for broken streaks and trigger confessionals
+export const checkStreakBreaks = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const oneDayAgo = now - (24 * 60 * 60 * 1000);
+    
+    // Get all user's habits
+    const habits = await ctx.db
+      .query("habits")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    const brokenStreaks = [];
+
+    for (const habit of habits) {
+      // Get completions for this habit
+      const completions = await ctx.db
+        .query("habitCompletions")
+        .withIndex("by_habit", (q) => q.eq("habitId", habit._id))
+        .filter((q) => q.eq(q.field("userId"), args.userId))
+        .order("desc")
+        .collect();
+
+      if (completions.length === 0) continue;
+
+      const currentStreak = calculateStreak(completions, now);
+      const lastCompletion = completions[0];
+      const timeSinceLastCompletion = now - lastCompletion.completedAt;
+
+      // Check if streak is broken (no completion in the last 24-48 hours for daily habits)
+      if (habit.targetFrequency === "daily" && timeSinceLastCompletion > (24 * 60 * 60 * 1000)) {
+        // Check if this is actually a break (not just a new day)
+        const yesterday = now - (24 * 60 * 60 * 1000);
+        const hasCompletionYesterday = completions.some(
+          c => c.completedAt >= yesterday && c.completedAt < now
+        );
+
+        if (!hasCompletionYesterday && currentStreak > 0) {
+          // Trigger confessional for broken streak
+          await ctx.runMutation("confessional:triggerConfessional", {
+            userId: args.userId,
+            habitId: habit._id,
+            habitName: habit.name,
+            streakLength: currentStreak,
+          });
+
+          brokenStreaks.push({
+            habitId: habit._id,
+            habitName: habit.name,
+            streakLength: currentStreak,
+          });
+        }
+      }
+    }
+
+    return { brokenStreaks };
+  },
+});
+
+// Helper function to calculate streak
+function calculateStreak(completions: any[], now: number): number {
+  if (completions.length === 0) return 0;
+
+  let streak = 0;
+  const oneDay = 24 * 60 * 60 * 1000;
+  let currentDate = new Date(now);
+  currentDate.setHours(0, 0, 0, 0);
+
+  for (let i = 0; i < completions.length; i++) {
+    const completionDate = new Date(completions[i].completedAt);
+    completionDate.setHours(0, 0, 0, 0);
+    
+    const expectedDate = new Date(currentDate.getTime() - (streak * oneDay));
+    
+    if (completionDate.getTime() === expectedDate.getTime()) {
+      streak++;
+    } else if (completionDate.getTime() < expectedDate.getTime()) {
+      // Gap in streak, stop counting
+      break;
+    } else {
+      // Completion is in the future, skip
+      continue;
+    }
+  }
+
+  return streak;
+}
+
 // Get habit completions for a specific date range
 export const getHabitCompletions = query({
   args: {

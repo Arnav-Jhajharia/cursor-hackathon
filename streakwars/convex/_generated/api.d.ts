@@ -15,6 +15,7 @@ import type * as challengeInvites from "../challengeInvites.js";
 import type * as challengeSets from "../challengeSets.js";
 import type * as challengeWars from "../challengeWars.js";
 import type * as challenges from "../challenges.js";
+import type * as confessional from "../confessional.js";
 import type * as cronHandlers from "../cronHandlers.js";
 import type * as crons from "../crons.js";
 import type * as customChallengeHabits from "../customChallengeHabits.js";
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   challengeSets: typeof challengeSets;
   challengeWars: typeof challengeWars;
   challenges: typeof challenges;
+  confessional: typeof confessional;
   cronHandlers: typeof cronHandlers;
   crons: typeof crons;
   customChallengeHabits: typeof customChallengeHabits;

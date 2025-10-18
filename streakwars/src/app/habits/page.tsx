@@ -5,11 +5,13 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useState, useEffect } from "react";
 import { Id } from "../../../convex/_generated/dataModel";
+import { useRouter } from "next/navigation";
 import HabitList from "../../components/HabitList";
 import AddHabitModal from "../../components/AddHabitModal";
 
 export default function HabitsPage() {
   const { user } = useUser();
+  const router = useRouter();
   const [showAddHabit, setShowAddHabit] = useState(false);
   const [activeTab, setActiveTab] = useState<"my-habits" | "discover">("my-habits");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -24,6 +26,7 @@ export default function HabitsPage() {
   const publicHabits = useQuery(api.habits.getPublicHabits, { limit: 20 });
   const remixHabit = useMutation(api.habits.remixHabit);
   const createSampleHabits = useMutation(api.seedHabits.createSimpleSampleHabits);
+  const createPublicHabits = useMutation(api.seedHabits.createSamplePublicHabits);
 
   const categories = [
     { value: "all", label: "All Categories", icon: "🏠" },
@@ -185,25 +188,47 @@ export default function HabitsPage() {
                   <div className="text-6xl mb-4 opacity-50">🔍</div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No public habits yet</h3>
                   <p className="text-gray-500 text-sm mb-6">Be the first to create a public habit for others to discover!</p>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const result = await createSampleHabits({ userId: currentUser._id });
-                        console.log("Sample habits result:", result);
-                        if (result.message) {
-                          alert(result.message);
-                        } else {
-                          alert("Sample public habits created! Refresh to see them.");
+                  <div className="space-y-3">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const result = await createSampleHabits({ userId: currentUser._id });
+                          console.log("Sample habits result:", result);
+                          if (result.message) {
+                            alert(result.message);
+                          } else {
+                            alert("Sample public habits created! Refresh to see them.");
+                          }
+                        } catch (error) {
+                          console.error("Error creating sample habits:", error);
+                          alert(`Error creating sample habits: ${error}`);
                         }
-                      } catch (error) {
-                        console.error("Error creating sample habits:", error);
-                        alert(`Error creating sample habits: ${error}`);
-                      }
-                    }}
-                    className="px-6 py-3 bg-gray-800 text-white rounded-xl font-semibold text-sm hover:bg-gray-700 transition-colors"
-                  >
-                    Create Sample Public Habits
-                  </button>
+                      }}
+                      className="px-6 py-3 bg-gray-800 text-white rounded-xl font-semibold text-sm hover:bg-gray-700 transition-colors"
+                    >
+                      Create Sample Public Habits
+                    </button>
+                    
+                    <button
+                      onClick={async () => {
+                        try {
+                          const result = await createPublicHabits({ userId: currentUser._id });
+                          console.log("Public habits result:", result);
+                          if (result.message) {
+                            alert(result.message);
+                          } else {
+                            alert("Comprehensive public habits created! Refresh to see them.");
+                          }
+                        } catch (error) {
+                          console.error("Error creating public habits:", error);
+                          alert(`Error creating public habits: ${error}`);
+                        }
+                      }}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors"
+                    >
+                      Create Comprehensive Public Habits
+                    </button>
+                  </div>
                 </div>
               ) : filteredPublicHabits.length === 0 ? (
                 <div className="text-center py-12">

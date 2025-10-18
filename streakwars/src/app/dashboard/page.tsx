@@ -9,6 +9,8 @@ import StatsOverview from "../../components/StatsOverview";
 import AddHabitModal from "../../components/AddHabitModal";
 import AITestPanel from "../../components/AITestPanel";
 import WarSystemTest from "../../components/WarSystemTest";
+import ConfessionalDashboard from "../../components/ConfessionalDashboard";
+import ConfessionalTestPanel from "../../components/ConfessionalTestPanel";
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -250,6 +252,12 @@ export default function DashboardPage() {
             <HabitList userId={currentUser._id} />
           </div>
         </div>
+
+        {/* Confessional Dashboard */}
+        <ConfessionalDashboard userId={currentUser._id} />
+
+        {/* Confessional Test Panel */}
+        <ConfessionalTestPanel userId={currentUser._id} />
       </div>
 
       {/* Add Habit Modal */}

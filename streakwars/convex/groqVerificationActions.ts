@@ -3,9 +3,10 @@ import { v } from "convex/values";
 import { api } from "./_generated/api";
 import Groq from "groq-sdk";
 
-const groq = new Groq({
+// Initialize Groq only if API key is available
+const groq = process.env.GROQ_API_KEY ? new Groq({
   apiKey: process.env.GROQ_API_KEY,
-});
+}) : null;
 
 export interface VerificationResult {
   verified: boolean;
@@ -23,24 +24,34 @@ export const verifyHabitWithPhotoAction = action({
     completionId: v.id("habitCompletions"),
   },
   handler: async (ctx, args): Promise<VerificationResult> => {
+    // Check if Groq is available
+    if (!groq) {
+      return {
+        verified: false,
+        confidence: 0,
+        reason: "AI verification service not configured"
+      };
+    }
+
     try {
-      const prompt = `Verify if this image shows the user doing their habit: ${args.habitName}. 
-      
-      Be lenient in your assessment. If the image shows ANY evidence of the habit being performed, even partially or indirectly, consider it verified.
-      
-      Look for:
-      - Any visual indication of the habit activity
-      - Related equipment, tools, or environment
-      - Even partial or indirect evidence counts
-      
-      Only reject if the image is completely unrelated or shows no connection to the habit.
-      
-      Respond with a JSON object in this exact format:
-      {
-        "verified": true/false,
-        "confidence": 0.0-1.0,
-        "reason": "Brief explanation of your assessment"
-      }`;
+      const prompt = `You are a habit verification AI. Analyze the provided image to verify if it shows the user performing their habit: "${args.habitName}".
+
+INSTRUCTIONS:
+- Be lenient in your assessment
+- If the image shows ANY evidence of the habit being performed, even partially or indirectly, consider it verified
+- Look for visual indications, related equipment, tools, or environment
+- Only reject if the image is completely unrelated to the habit
+
+CRITICAL: You MUST respond with ONLY a valid JSON object. Do not include any other text, explanations, or formatting.
+
+Required JSON format:
+{
+  "verified": true,
+  "confidence": 0.8,
+  "reason": "Brief explanation"
+}
+
+Respond now with ONLY the JSON object:`;
 
       const completion = await groq.chat.completions.create({
         messages: [
@@ -80,7 +91,17 @@ export const verifyHabitWithPhotoAction = action({
         jsonString = jsonString.replace(/^```\s*/, '').replace(/\s*```$/, '');
       }
       
-      const result = JSON.parse(jsonString) as VerificationResult;
+      let result: VerificationResult;
+      try {
+        result = JSON.parse(jsonString) as VerificationResult;
+      } catch (parseError) {
+        console.error("Failed to parse Groq response as JSON:", jsonString);
+        return {
+          verified: false,
+          confidence: 0,
+          reason: "Unable to parse AI response. Please try again."
+        };
+      }
       
       // Validate response format
       if (typeof result.verified !== 'boolean' || 
@@ -130,29 +151,39 @@ export const verifyHabitWithReadingAction = action({
     completionId: v.id("habitCompletions"),
   },
   handler: async (ctx, args): Promise<VerificationResult> => {
+    // Check if Groq is available
+    if (!groq) {
+      return {
+        verified: false,
+        confidence: 0,
+        reason: "AI verification service not configured"
+      };
+    }
+
     try {
-      const prompt = `Verify if this reading summary is legitimate for the habit "${args.habitName}".
+      const prompt = `You are a reading verification AI. Analyze this reading summary to verify if it's legitimate for the habit: "${args.habitName}".
 
-      Book: ${args.bookName}
-      Pages: ${args.pageRange}
-      Summary: ${args.summary}
+BOOK DETAILS:
+- Book: ${args.bookName}
+- Pages: ${args.pageRange}
+- Summary: ${args.summary}
 
-      Be lenient in your assessment. Accept the summary if it shows ANY indication of actual reading, even minimal detail.
-      
-      Accept if:
-      - Any specific detail about the book content is mentioned
-      - The summary shows understanding of the material
-      - Even brief or basic summaries are acceptable
-      - The content seems reasonable for the page range
-      
-      Only reject if the summary is completely generic, copied, or shows no understanding of the book.
+INSTRUCTIONS:
+- Be lenient in your assessment
+- Accept if it shows ANY indication of actual reading, even minimal detail
+- Look for specific details about book content, understanding of material, or reasonable content for the page range
+- Only reject if completely generic, copied, or shows no understanding
 
-      Respond with a JSON object in this exact format:
-      {
-        "verified": true/false,
-        "confidence": 0.0-1.0,
-        "reason": "Brief explanation of your assessment"
-      }`;
+CRITICAL: You MUST respond with ONLY a valid JSON object. Do not include any other text, explanations, or formatting.
+
+Required JSON format:
+{
+  "verified": true,
+  "confidence": 0.8,
+  "reason": "Brief explanation"
+}
+
+Respond now with ONLY the JSON object:`;
 
       const completion = await groq.chat.completions.create({
         messages: [
@@ -181,7 +212,17 @@ export const verifyHabitWithReadingAction = action({
         jsonString = jsonString.replace(/^```\s*/, '').replace(/\s*```$/, '');
       }
       
-      const result = JSON.parse(jsonString) as VerificationResult;
+      let result: VerificationResult;
+      try {
+        result = JSON.parse(jsonString) as VerificationResult;
+      } catch (parseError) {
+        console.error("Failed to parse Groq response as JSON:", jsonString);
+        return {
+          verified: false,
+          confidence: 0,
+          reason: "Unable to parse AI response. Please try again."
+        };
+      }
       
       // Validate response format
       if (typeof result.verified !== 'boolean' || 
@@ -237,6 +278,15 @@ export const verifyHabitWithGroqAction = action({
     completionId: v.id("habitCompletions"),
   },
   handler: async (ctx, args): Promise<VerificationResult> => {
+    // Check if Groq is available
+    if (!groq) {
+      return {
+        verified: false,
+        confidence: 0,
+        reason: "AI verification service not configured"
+      };
+    }
+
     switch (args.verificationType) {
       case "photo":
         if (!args.inputData.imageUrl) {

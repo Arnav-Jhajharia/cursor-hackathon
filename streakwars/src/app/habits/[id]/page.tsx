@@ -6,6 +6,7 @@ import { api } from "../../../../convex/_generated/api";
 import { useState, useEffect } from "react";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
+import HabitVerificationSystem from "../../../components/HabitVerificationSystem";
 
 export default function HabitDetailPage() {
   const { user } = useUser();
@@ -29,7 +30,6 @@ export default function HabitDetailPage() {
   const habitCompletions = useQuery(api.habits.getAllHabitCompletions, { habitId });
   const habitChallenges = useQuery(api.habits.getHabitChallenges, { habitId });
 
-  const completeHabit = useMutation(api.habits.completeHabit);
   const updateHabit = useMutation(api.habits.updateHabit);
   const deleteHabit = useMutation(api.habits.deleteHabit);
 
@@ -81,18 +81,6 @@ export default function HabitDetailPage() {
   const weeklyCompletions = getWeeklyCompletions(habitCompletions || []);
   const monthlyCompletions = getMonthlyCompletions(habitCompletions || []);
 
-  const handleCompleteHabit = async () => {
-    try {
-      await completeHabit({
-        habitId,
-        userId: currentUser._id,
-        points: habit.pointsPerCompletion,
-      });
-    } catch (error) {
-      console.error("Error completing habit:", error);
-      alert("Failed to complete habit: " + (error as Error).message);
-    }
-  };
 
   const handleUpdateHabit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,12 +168,16 @@ export default function HabitDetailPage() {
                 </div>
               </div>
               
-              <button
-                onClick={handleCompleteHabit}
-                className="px-6 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors text-lg"
-              >
-                ✅ Complete
-              </button>
+              <HabitVerificationSystem
+                habitId={habitId}
+                userId={currentUser._id}
+                habitName={habit.name}
+                habitCategory={habit.category}
+                onVerificationComplete={() => {
+                  // Refresh the page data
+                  window.location.reload();
+                }}
+              />
             </div>
 
             {/* Stats Grid */}
@@ -216,13 +208,35 @@ export default function HabitDetailPage() {
                   {habitCompletions.slice(0, 10).map((completion) => (
                     <div
                       key={completion._id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className={`flex items-center justify-between p-3 rounded-lg ${
+                        completion.verificationStatus === "verified" 
+                          ? "bg-green-50 border border-green-200" 
+                          : completion.verificationStatus === "rejected"
+                          ? "bg-red-50 border border-red-200"
+                          : "bg-gray-50"
+                      }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          completion.verificationStatus === "verified" 
+                            ? "bg-green-100" 
+                            : completion.verificationStatus === "rejected"
+                            ? "bg-red-100"
+                            : "bg-gray-100"
+                        }`}>
+                          {completion.verificationStatus === "verified" ? (
+                            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          ) : completion.verificationStatus === "rejected" ? (
+                            <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          )}
                         </div>
                         <div>
                           <div className="font-medium text-gray-900">
@@ -230,11 +244,20 @@ export default function HabitDetailPage() {
                           </div>
                           <div className="text-sm text-gray-500">
                             {new Date(completion.completedAt).toLocaleTimeString()}
+                            {completion.verificationStatus === "verified" && (
+                              <span className="ml-2 text-green-600 font-medium">✓ Verified</span>
+                            )}
+                            {completion.verificationStatus === "rejected" && (
+                              <span className="ml-2 text-red-600 font-medium">✗ Rejected</span>
+                            )}
+                            {completion.verificationStatus === "pending" && (
+                              <span className="ml-2 text-yellow-600 font-medium">⏳ Pending</span>
+                            )}
                           </div>
                         </div>
                       </div>
                       <div className="text-sm font-medium text-green-600">
-                        +{completion.points} pts
+                        +{completion.pointsEarned || completion.points} pts
                       </div>
                     </div>
                   ))}
