@@ -12,6 +12,8 @@ import ChallengeInvitations from "./ChallengeInvitations";
 import AddHabitModal from "./AddHabitModal";
 import FriendsList from "./FriendsList";
 import ChallengesPage from "./ChallengesPage";
+import ExploreTab from "./ExploreTab";
+import KnowledgeQuest from "./KnowledgeQuest";
 
 export default function Dashboard() {
   const { user } = useUser();
@@ -337,6 +339,12 @@ export default function Dashboard() {
             Challenges
           </button>
           <button
+            onClick={() => setActiveTab("explore")}
+            className={`tab-button ${activeTab === "explore" ? "active" : ""}`}
+          >
+            Explore
+          </button>
+          <button
             onClick={() => setActiveTab("friends")}
             className={`tab-button ${activeTab === "friends" ? "active" : ""}`}
           >
@@ -365,6 +373,36 @@ export default function Dashboard() {
 
           {activeTab === "challenges" && (
             <ChallengesPage userId={currentUser._id} />
+          )}
+
+          {activeTab === "explore" && (
+            <div>
+              <div className="section-header">
+                <h2 className="section-title">Explore</h2>
+              </div>
+              <div className="content-card">
+                <div className="space-y-6">
+                  <ExploreTab 
+                    userId={currentUser._id} 
+                    onAddHabit={(habitData) => {
+                      // Handle adding habit from explore tab
+                      setShowAddHabit(true);
+                      // You could pre-populate the form here
+                    }}
+                  />
+                  <div className="border-t pt-6">
+                    <KnowledgeQuest 
+                      userId={currentUser._id}
+                      onCreateChallenge={(challengeData) => {
+                        // Handle creating challenge from knowledge quest
+                        // This would integrate with the existing challenge creation flow
+                        console.log("Creating challenge:", challengeData);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {activeTab === "friends" && (
