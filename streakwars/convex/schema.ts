@@ -121,6 +121,7 @@ export default defineSchema({
     totalPoints: v.number(), // Points earned in this challenge
     streakCount: v.number(), // Current streak in this challenge
     isActive: v.boolean(),
+    customHabits: v.optional(v.array(v.string())), // User's custom habits for this challenge
   })
     .index("by_challenge", ["challengeId"])
     .index("by_user", ["userId"])

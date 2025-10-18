@@ -119,8 +119,16 @@ export const joinChallenge = mutation({
       throw new Error("Already participating in this challenge");
     }
 
+    // Get challenge details
+    const challenge = await ctx.db.get(args.challengeId);
+    if (!challenge) {
+      throw new Error("Challenge not found");
+    }
+
     const now = Date.now();
-    return await ctx.db.insert("challengeParticipants", {
+    
+    // Create participation record
+    const participationId = await ctx.db.insert("challengeParticipants", {
       challengeId: args.challengeId,
       userId: args.userId,
       joinedAt: now,
@@ -128,6 +136,36 @@ export const joinChallenge = mutation({
       streakCount: 0,
       isActive: true,
     });
+
+    // Create actual habit objects for each target habit in the challenge
+    for (const habitName of challenge.targetHabits) {
+      // Check if habit already exists for this user
+      const existingHabit = await ctx.db
+        .query("habits")
+        .withIndex("by_user_active", (q) =>
+          q.eq("userId", args.userId).eq("isActive", true)
+        )
+        .filter((q) => q.eq(q.field("name"), habitName))
+        .first();
+
+      if (!existingHabit) {
+        await ctx.db.insert("habits", {
+          userId: args.userId,
+          name: habitName,
+          description: undefined,
+          category: "Challenge",
+          targetFrequency: "daily",
+          pointsPerCompletion: 10,
+          isActive: true,
+          isPublic: false,
+          createdAt: now,
+          updatedAt: now,
+          originalHabitId: undefined,
+        });
+      }
+    }
+
+    return participationId;
   },
 });
 

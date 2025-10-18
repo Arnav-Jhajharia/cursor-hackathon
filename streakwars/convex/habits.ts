@@ -25,6 +25,44 @@ export const getUserActiveHabits = query({
   },
 });
 
+// Get all habits for a user including challenge habits
+export const getUserHabitsWithChallenges = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    // Get personal habits
+    const personalHabits = await ctx.db
+      .query("habits")
+      .withIndex("by_user_active", (q) => 
+        q.eq("userId", args.userId).eq("isActive", true)
+      )
+      .collect();
+
+    // Get challenge habits from active challenges
+    const challengeParticipations = await ctx.db
+      .query("challengeParticipants")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    // Get challenge habits (actual habit objects created when joining challenges)
+    const challengeHabits = await ctx.db
+      .query("habits")
+      .withIndex("by_user_active", (q) =>
+        q.eq("userId", args.userId).eq("isActive", true)
+      )
+      .filter((q) => q.eq(q.field("category"), "Challenge"))
+      .collect();
+
+    // Filter out personal habits that have the same name as challenge habits to avoid duplicates
+    const challengeHabitNames = challengeHabits.map(h => h.name);
+    const filteredPersonalHabits = personalHabits.filter(habit => 
+      !challengeHabitNames.includes(habit.name)
+    );
+
+    return [...filteredPersonalHabits, ...challengeHabits];
+  },
+});
+
 // Get habit by ID
 export const getHabit = query({
   args: { habitId: v.id("habits") },

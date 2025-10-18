@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 // Complete a habit
 export const completeHabit = mutation({
@@ -86,46 +87,34 @@ export const completeHabit = mutation({
 // Undo a habit completion (if completed today)
 export const undoHabitCompletion = mutation({
   args: {
-    habitId: v.id("habits"),
-    userId: v.id("users"),
+    completionId: v.id("habitCompletions"),
   },
   handler: async (ctx, args) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startOfDay = today.getTime();
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const endOfDay = tomorrow.getTime();
-
-    const completion = await ctx.db
-      .query("habitCompletions")
-      .withIndex("by_habit_date", (q) => 
-        q.eq("habitId", args.habitId)
-         .gte("completedAt", startOfDay)
-         .lt("completedAt", endOfDay)
-      )
-      .first();
-
+    const completion = await ctx.db.get(args.completionId);
     if (!completion) {
-      throw new Error("No completion found for today");
+      throw new Error("Completion not found");
+    }
+
+    const habit = await ctx.db.get(completion.habitId);
+    if (!habit) {
+      throw new Error("Habit not found");
+    }
+
+    const user = await ctx.db.get(completion.userId);
+    if (!user) {
+      throw new Error("User not found");
     }
 
     // Delete the completion
-    await ctx.db.delete(completion._id);
+    await ctx.db.delete(args.completionId);
 
     // Update user stats
-    const user = await ctx.db.get(args.userId);
-    const habit = await ctx.db.get(args.habitId);
-    
-    if (user && habit) {
-      await ctx.db.patch(args.userId, {
-        totalPoints: Math.max(0, user.totalPoints - habit.pointsPerCompletion),
-        updatedAt: Date.now(),
-      });
-    }
+    await ctx.db.patch(completion.userId, {
+      totalPoints: Math.max(0, user.totalPoints - completion.pointsEarned),
+      updatedAt: Date.now(),
+    });
 
-    return completion._id;
+    return args.completionId;
   },
 });
 
