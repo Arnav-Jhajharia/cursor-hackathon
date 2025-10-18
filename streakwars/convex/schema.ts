@@ -178,6 +178,7 @@ export default defineSchema({
     sabotageIntensity: v.optional(v.number()), // 1-5 intensity level
     sabotageHabitsCompleted: v.optional(v.number()), // How many extra habits challenger did
     sabotagePenaltiesApplied: v.optional(v.number()), // How many penalties applied to defender
+    sabotagePower: v.optional(v.number()), // Current sabotage power from completed challenges
     createdAt: v.number(),
     expiresAt: v.number(), // 24 hours to accept
   })
@@ -186,6 +187,19 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_challenge", ["challengeId"])
     .index("by_defender_status", ["defenderId", "status"]),
+
+  // Sabotage Challenge Completions - tracks completed random challenges for sabotage power
+  sabotageChallengeCompletions: defineTable({
+    warId: v.id("challengeWars"),
+    challengeId: v.string(), // ID of the challenge from SABOTAGE_CHALLENGES
+    challengerId: v.id("users"),
+    sabotagePower: v.number(), // Power earned from this challenge
+    proof: v.optional(v.string()), // Optional proof (photo, description, etc.)
+    completedAt: v.number(),
+  })
+    .index("by_war", ["warId"])
+    .index("by_challenger", ["challengerId"])
+    .index("by_war_challenge", ["warId", "challengeId"]),
 
   // Group wars table - stores group vs group wars in challenges
   groupWars: defineTable({

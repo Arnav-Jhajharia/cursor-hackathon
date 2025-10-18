@@ -30,6 +30,7 @@ import type * as habitVerification from "../habitVerification.js";
 import type * as habits from "../habits.js";
 import type * as notifications from "../notifications.js";
 import type * as rewards from "../rewards.js";
+import type * as sabotageChallenges from "../sabotageChallenges.js";
 import type * as seedHabits from "../seedHabits.js";
 import type * as splitwise from "../splitwise.js";
 import type * as users from "../users.js";
@@ -72,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   habits: typeof habits;
   notifications: typeof notifications;
   rewards: typeof rewards;
+  sabotageChallenges: typeof sabotageChallenges;
   seedHabits: typeof seedHabits;
   splitwise: typeof splitwise;
   users: typeof users;

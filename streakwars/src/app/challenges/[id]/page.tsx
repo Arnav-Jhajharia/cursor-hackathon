@@ -12,7 +12,7 @@ import ChallengeShareModal from "../../../components/ChallengeShareModal";
 import WarDeclarationModal from "../../../components/WarDeclarationModal";
 import WarNotification from "../../../components/WarNotification";
 import ActiveWarDashboard from "../../../components/ActiveWarDashboard";
-import SabotageSystem from "../../../components/SabotageSystem";
+import SabotageChallengeSystem from "../../../components/SabotageChallengeSystem";
 
 export default function ChallengeDetailPage() {
   const { user } = useUser();
@@ -325,7 +325,7 @@ export default function ChallengeDetailPage() {
                     war={war}
                     isChallenger={war.challengerId === currentUser._id}
                   />
-                  <SabotageSystem
+                  <SabotageChallengeSystem
                     warId={war._id}
                     challengeId={challengeId}
                     userId={currentUser._id}
