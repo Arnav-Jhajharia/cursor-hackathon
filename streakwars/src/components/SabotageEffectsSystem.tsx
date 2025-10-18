@@ -25,6 +25,7 @@ export default function SabotageEffectsSystem({ userId, challengeId }: SabotageE
   // Mutations
   const completeEscapeTask = useMutation(api.sabotageEffects.completeEscapeTask);
   const launchCounterSabotage = useMutation(api.sabotageEffects.launchCounterSabotage);
+  const launchImmediateCounterSabotage = useMutation(api.sabotageEffects.launchImmediateCounterSabotage);
 
   // Apply UI effects based on sabotage status
   useEffect(() => {
@@ -98,6 +99,20 @@ export default function SabotageEffectsSystem({ userId, challengeId }: SabotageE
     } catch (error) {
       console.error("❌ Error launching counter-sabotage:", error);
       alert("Failed to launch counter-sabotage: " + (error as Error).message);
+    }
+  };
+
+  const handleLaunchImmediateCounterSabotage = async () => {
+    try {
+      const result = await launchImmediateCounterSabotage({
+        warId: sabotageEffects!.warId,
+      });
+
+      console.log("💀 Immediate counter-sabotage launched:", result);
+      showCounterSabotageEffect();
+    } catch (error) {
+      console.error("❌ Error launching immediate counter-sabotage:", error);
+      alert("Failed to launch immediate counter-sabotage: " + (error as Error).message);
     }
   };
 
@@ -267,12 +282,20 @@ export default function SabotageEffectsSystem({ userId, challengeId }: SabotageE
           </div>
         )}
 
-        <button
-          onClick={() => setShowCounterSabotageModal(true)}
-          className="w-full mt-3 p-2 bg-purple-700 hover:bg-purple-600 rounded text-sm font-bold transition-colors"
-        >
-          💀 COUNTER-SABOTAGE
-        </button>
+        <div className="space-y-2">
+          <button
+            onClick={handleLaunchImmediateCounterSabotage}
+            className="w-full p-2 bg-red-700 hover:bg-red-600 rounded text-sm font-bold transition-colors"
+          >
+            ⚡ IMMEDIATE COUNTER-SABOTAGE
+          </button>
+          <button
+            onClick={() => setShowCounterSabotageModal(true)}
+            className="w-full p-2 bg-purple-700 hover:bg-purple-600 rounded text-sm font-bold transition-colors"
+          >
+            💀 MAXIMUM COUNTER-SABOTAGE
+          </button>
+        </div>
       </div>
 
       {/* Escape Task Modal */}

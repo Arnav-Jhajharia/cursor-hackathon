@@ -223,7 +223,7 @@ export const launchCounterSabotage = mutation({
       throw new Error("War not found or not active");
     }
 
-    // Check if defender has completed escape tasks
+    // Check if defender has completed any escape tasks (reduced requirement)
     const escapeCompletions = await ctx.db
       .query("sabotageChallengeCompletions")
       .withIndex("by_war", (q) => q.eq("warId", args.warId))
@@ -235,8 +235,9 @@ export const launchCounterSabotage = mutation({
       completion.challengeId.startsWith("escape_")
     );
 
-    if (escapeTaskCompletions.length < 3) {
-      throw new Error("Defender must complete 3 escape tasks before counter-sabotage is available");
+    // Allow counter-sabotage after just 1 escape task (easier to fight back)
+    if (escapeTaskCompletions.length < 1) {
+      throw new Error("Complete at least 1 escape task to launch counter-sabotage!");
     }
 
     // Launch counter-sabotage with maximum intensity
@@ -271,6 +272,53 @@ export const launchCounterSabotage = mutation({
       message: `💀 COUNTER-SABOTAGE LAUNCHED! Maximum intensity activated! Your opponent is now under extreme pressure!`,
       intensity: 10,
       penaltyAmount: 500,
+    };
+  },
+});
+
+// Immediate counter-sabotage - no escape tasks required
+export const launchImmediateCounterSabotage = mutation({
+  args: {
+    warId: v.id("challengeWars"),
+  },
+  handler: async (ctx, args) => {
+    const war = await ctx.db.get(args.warId);
+    if (!war || war.status !== "accepted") {
+      throw new Error("War not found or not active");
+    }
+
+    // Launch immediate counter-sabotage - no requirements
+    await ctx.db.patch(args.warId, {
+      sabotageActive: true,
+      sabotageIntensity: 8, // High but not maximum intensity
+      sabotagePenaltiesApplied: (war.sabotagePenaltiesApplied || 0) + 3,
+      sabotagePower: 0, // Reset sabotage power
+    });
+
+    // Apply moderate penalties to the original challenger
+    const challenger = await ctx.db.get(war.challengerId);
+    if (challenger) {
+      const penaltyAmount = 200; // Moderate penalty
+      const newBalance = Math.max(0, (challenger.rewardsBalance || 0) - penaltyAmount);
+      await ctx.db.patch(war.challengerId, {
+        rewardsBalance: newBalance,
+      });
+
+      // Record penalty transaction
+      await ctx.db.insert("rewardsTransactions", {
+        userId: war.challengerId,
+        amount: -penaltyAmount,
+        type: "immediate_counter_sabotage_penalty",
+        description: `Immediate counter-sabotage penalty: ${penaltyAmount} coins lost`,
+        createdAt: Date.now(),
+      });
+    }
+
+    return {
+      success: true,
+      message: `💀 IMMEDIATE COUNTER-SABOTAGE! High intensity activated! Your opponent is now under pressure!`,
+      intensity: 8,
+      penaltyAmount: 200,
     };
   },
 });

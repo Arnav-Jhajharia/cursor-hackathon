@@ -56,13 +56,13 @@ export default function DashboardPage() {
         </div>
 
         {/* AI TEST PANEL */}
-        <AITestPanel />
+        {/* <AITestPanel /> */}
 
         {/* WAR SYSTEM TEST */}
-        <WarSystemTest />
+        {/* <WarSystemTest /> */}
 
         {/* CLEANUP PANEL - SUPER VISIBLE */}
-        <div style={{
+        {/* <div style={{
           backgroundColor: '#ff0000',
           border: '10px solid #000000',
           borderRadius: '20px',
@@ -178,7 +178,7 @@ export default function DashboardPage() {
           }}>
             ⚠️ These actions cannot be undone! Use with caution.
           </div>
-        </div>
+        </div> */}
 
         {/* Stats Overview */}
         <div className="mb-8">

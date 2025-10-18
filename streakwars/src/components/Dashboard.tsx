@@ -192,7 +192,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* INLINE CLEANUP PANEL - SUPER VISIBLE */}
+        {/* INLINE CLEANUP PANEL - SUPER VISIBLE - COMMENTED OUT */}
+        {/* 
         <div style={{
           backgroundColor: '#ff0000',
           border: '10px solid #000000',
@@ -310,6 +311,7 @@ export default function Dashboard() {
             ⚠️ These actions cannot be undone! Use with caution.
           </div>
         </div>
+        */}
 
         {/* Stats Overview */}
         <div className="stats-section">

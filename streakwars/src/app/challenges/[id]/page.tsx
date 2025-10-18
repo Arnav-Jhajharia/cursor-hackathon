@@ -56,6 +56,7 @@ export default function ChallengeDetailPage() {
   const leaveChallenge = useMutation(api.challenges.leaveChallenge);
   const settleChallenge = useMutation(api.splitwise.settleMoneyChallenge as any);
   const declareWar = useMutation(api.challengeWars.declareWar);
+  const launchImmediateCounterSabotage = useMutation(api.sabotageEffects.launchImmediateCounterSabotage);
 
   useEffect(() => {
     if (user && !currentUser) {
@@ -336,6 +337,33 @@ export default function ChallengeDetailPage() {
                     userId={currentUser._id}
                     isChallenger={war.challengerId === currentUser._id}
                   />
+                  
+                  {/* Counter-Sabotage Section for Defenders */}
+                  {war.defenderId === currentUser._id && war.sabotageActive && (
+                    <div className="bg-red-900 text-white rounded-2xl border border-red-700 shadow-lg p-6 mt-4">
+                      <h3 className="text-xl font-bold mb-4 flex items-center">
+                        💀 YOU'RE UNDER SABOTAGE! 💀
+                      </h3>
+                      <p className="text-red-200 mb-4">
+                        Your opponent has activated sabotage against you! Fight back with counter-sabotage!
+                      </p>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={async () => {
+                            try {
+                              const result = await launchImmediateCounterSabotage({ warId: war._id });
+                              alert(result.message);
+                            } catch (error) {
+                              alert("Failed to launch counter-sabotage: " + (error as Error).message);
+                            }
+                          }}
+                          className="flex-1 bg-red-700 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition-colors"
+                        >
+                          ⚡ IMMEDIATE COUNTER-SABOTAGE
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
           </div>
