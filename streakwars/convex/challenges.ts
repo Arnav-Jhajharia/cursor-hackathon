@@ -11,6 +11,277 @@ function generateInviteCode(): string {
   return result;
 }
 
+// Get challenge habits for a user
+export const getUserChallengeHabits = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    // Get all challenges the user is participating in
+    const userChallenges = await ctx.db
+      .query("challengeParticipants")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    if (userChallenges.length === 0) {
+      return [];
+    }
+
+    // Get all challenge details
+    const challenges = await Promise.all(
+      userChallenges.map(async (participation) => {
+        const challenge = await ctx.db.get(participation.challengeId);
+        return challenge;
+      })
+    );
+
+    // Filter out null challenges and get unique habits
+    const validChallenges = challenges.filter(Boolean);
+    const allHabits = new Set<string>();
+    
+    validChallenges.forEach(challenge => {
+      if (challenge && challenge.targetHabits) {
+        challenge.targetHabits.forEach(habitName => {
+          allHabits.add(habitName);
+        });
+      }
+    });
+
+    // Convert habit names to habit objects with challenge context
+    const challengeHabits = Array.from(allHabits).map(habitName => {
+      // Find which challenges this habit belongs to
+      const relatedChallenges = validChallenges.filter(challenge => 
+        challenge && challenge.targetHabits?.includes(habitName)
+      );
+
+      return {
+        name: habitName,
+        challenges: relatedChallenges.map(c => ({
+          id: c!._id,
+          name: c!.name,
+          isActive: c!.isActive,
+          endDate: c!.endDate
+        })),
+        // Default values for display
+        category: "challenge",
+        targetFrequency: "daily",
+        pointsPerCompletion: 10,
+        isChallengeHabit: true
+      };
+    });
+
+    return challengeHabits;
+  },
+});
+
+// Complete a challenge habit
+export const completeChallengeHabit = mutation({
+  args: {
+    userId: v.id("users"),
+    habitName: v.string(),
+    challengeId: v.optional(v.id("challenges")), // Optional: if provided, only count for this challenge
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    
+    // Get all challenges the user is participating in
+    const userChallenges = await ctx.db
+      .query("challengeParticipants")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    if (userChallenges.length === 0) {
+      throw new Error("You are not participating in any challenges");
+    }
+
+    // Get challenge details
+    const challenges = await Promise.all(
+      userChallenges.map(async (participation) => {
+        const challenge = await ctx.db.get(participation.challengeId);
+        return challenge;
+      })
+    );
+
+    // Filter challenges that contain this habit
+    const relevantChallenges = challenges.filter(challenge => 
+      challenge && 
+      challenge.targetHabits?.includes(args.habitName) &&
+      challenge.isActive &&
+      (!args.challengeId || challenge._id === args.challengeId)
+    );
+
+    if (relevantChallenges.length === 0) {
+      throw new Error(`Habit "${args.habitName}" is not part of any active challenges you're participating in`);
+    }
+
+    // Check if already completed today for any of these challenges
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStart = today.getTime();
+
+    for (const challenge of relevantChallenges) {
+      const existingCompletion = await ctx.db
+        .query("challengeHabitCompletions")
+        .withIndex("by_user_challenge_habit", (q) => 
+          q.eq("userId", args.userId)
+           .eq("challengeId", challenge!._id)
+           .eq("habitName", args.habitName)
+        )
+        .filter((q) => q.gte(q.field("completedAt"), todayStart))
+        .first();
+
+      if (existingCompletion) {
+        throw new Error(`You've already completed "${args.habitName}" today for challenge "${challenge!.name}"`);
+      }
+    }
+
+    // Create completion records for each relevant challenge
+    const completionIds = [];
+    for (const challenge of relevantChallenges) {
+      const completionId = await ctx.db.insert("challengeHabitCompletions", {
+        userId: args.userId,
+        challengeId: challenge!._id,
+        habitName: args.habitName,
+        completedAt: now,
+        pointsEarned: 10, // Default points for challenge habits
+      });
+      completionIds.push(completionId);
+    }
+
+    // Update user's total points
+    const user = await ctx.db.get(args.userId);
+    if (user) {
+      const pointsToAdd = relevantChallenges.length * 10; // 10 points per challenge
+      await ctx.db.patch(args.userId, {
+        totalPoints: (user.totalPoints || 0) + pointsToAdd,
+        updatedAt: now,
+      });
+    }
+
+    return { 
+      success: true, 
+      completionsCreated: completionIds.length,
+      challenges: relevantChallenges.map(c => c!.name),
+      pointsEarned: relevantChallenges.length * 10
+    };
+  },
+});
+
+// Verify a challenge habit completion
+export const verifyChallengeHabitCompletion = mutation({
+  args: {
+    completionId: v.id("challengeHabitCompletions"),
+    verifierId: v.id("users"),
+    verificationNotes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const completion = await ctx.db.get(args.completionId);
+    if (!completion) {
+      throw new Error("Completion not found");
+    }
+
+    if (completion.isVerified) {
+      throw new Error("This completion has already been verified");
+    }
+
+    // Update the completion with verification details
+    await ctx.db.patch(args.completionId, {
+      isVerified: true,
+      verifiedBy: args.verifierId,
+      verifiedAt: Date.now(),
+      verificationNotes: args.verificationNotes,
+    });
+
+    // Award bonus points for verification (optional)
+    const user = await ctx.db.get(completion.userId);
+    if (user) {
+      await ctx.db.patch(completion.userId, {
+        totalPoints: (user.totalPoints || 0) + 5, // 5 bonus points for verification
+        updatedAt: Date.now(),
+      });
+    }
+
+    return { success: true, bonusPoints: 5 };
+  },
+});
+
+// Get unverified challenge habit completions for a user
+export const getUnverifiedChallengeCompletions = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const completions = await ctx.db
+      .query("challengeHabitCompletions")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("isVerified"), false))
+      .order("desc")
+      .collect();
+
+    // Get challenge details for each completion
+    const completionsWithChallenges = await Promise.all(
+      completions.map(async (completion) => {
+        const challenge = await ctx.db.get(completion.challengeId);
+        return {
+          ...completion,
+          challenge,
+        };
+      })
+    );
+
+    return completionsWithChallenges;
+  },
+});
+
+// Get challenge habit completions that need verification (for other participants)
+export const getCompletionsNeedingVerification = query({
+  args: { 
+    userId: v.id("users"),
+    challengeId: v.optional(v.id("challenges")),
+  },
+  handler: async (ctx, args) => {
+    // Get challenges the user is participating in
+    const userChallenges = await ctx.db
+      .query("challengeParticipants")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    if (userChallenges.length === 0) {
+      return [];
+    }
+
+    const challengeIds = args.challengeId 
+      ? [args.challengeId]
+      : userChallenges.map(p => p.challengeId);
+
+    // Get unverified completions from other participants in these challenges
+    const allCompletions = [];
+    for (const challengeId of challengeIds) {
+      const completions = await ctx.db
+        .query("challengeHabitCompletions")
+        .withIndex("by_challenge", (q) => q.eq("challengeId", challengeId))
+        .filter((q) => q.eq(q.field("isVerified"), false))
+        .collect();
+
+      allCompletions.push(...completions);
+    }
+
+    // Filter out the user's own completions
+    const othersCompletions = allCompletions.filter(c => c.userId !== args.userId);
+
+    // Get user and challenge details
+    const completionsWithDetails = await Promise.all(
+      othersCompletions.map(async (completion) => {
+        const user = await ctx.db.get(completion.userId);
+        const challenge = await ctx.db.get(completion.challengeId);
+        return {
+          ...completion,
+          user,
+          challenge,
+        };
+      })
+    );
+
+    return completionsWithDetails;
+  },
+});
+
 // Get current active challenge
 export const getCurrentChallenge = query({
   args: {},

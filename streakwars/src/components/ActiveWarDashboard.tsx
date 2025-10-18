@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface ActiveWarDashboardProps {
   war: any;
@@ -9,6 +10,7 @@ interface ActiveWarDashboardProps {
 
 export default function ActiveWarDashboard({ war, isChallenger }: ActiveWarDashboardProps) {
   const [showTaunts, setShowTaunts] = useState(false);
+  const router = useRouter();
 
   const opponent = isChallenger ? war.defender : war.challenger;
   const myPoints = isChallenger ? war.challengerPoints : war.defenderPoints;
@@ -142,6 +144,22 @@ export default function ActiveWarDashboard({ war, isChallenger }: ActiveWarDashb
             ))}
           </div>
         )}
+      </div>
+
+      {/* Action Buttons */}
+      <div className="mt-4 flex gap-3">
+        <button
+          onClick={() => router.push(`/war/${war._id}`)}
+          className="flex-1 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+        >
+          🔥 View Live War
+        </button>
+        <button
+          onClick={() => setShowTaunts(!showTaunts)}
+          className="flex-1 py-2 bg-gray-700 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+        >
+          {showTaunts ? "Hide Taunts" : "Show Taunts"}
+        </button>
       </div>
 
       {/* War Rules */}

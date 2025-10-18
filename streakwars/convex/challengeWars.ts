@@ -450,3 +450,11 @@ export const completeWar = mutation({
     };
   },
 });
+
+// Get war by ID
+export const getWarById = query({
+  args: { warId: v.id("challengeWars") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.warId);
+  },
+});

@@ -337,7 +337,7 @@ export default function ChallengeBuilder({ userId, onClose, onSubmit }: Challeng
             <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Invite Friends (Optional)</h3>
               <div className="grid gap-3 md:grid-cols-2">
-                {friends.map((friend) => (
+                {friends?.filter((friend): friend is NonNullable<typeof friend> => friend !== null).map((friend) => (
                   <div
                     key={friend._id}
                     className={`p-3 border rounded-lg cursor-pointer transition-all ${

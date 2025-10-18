@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 // Complete a habit
 export const completeHabit = mutation({
@@ -44,6 +45,26 @@ export const completeHabit = mutation({
       pointsEarned: habit.pointsPerCompletion,
       notes: args.notes,
     });
+
+    // Check if user is in any active mini wars and update their progress
+    const activeMiniWars = await ctx.db
+      .query("miniWars")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .filter((q) => q.eq(q.field("participants"), [args.userId]))
+      .collect();
+
+    for (const miniWar of activeMiniWars) {
+      // Check if war is still active (2 hours duration)
+      const warDuration = 2 * 60 * 60 * 1000;
+      if (miniWar.warStartedAt && Date.now() <= miniWar.warStartedAt + warDuration) {
+        await ctx.runMutation(api.miniWars.completeHabitInMiniWar, {
+          miniWarId: miniWar._id,
+          userId: args.userId,
+          habitId: args.habitId,
+          pointsEarned: habit.pointsPerCompletion,
+        });
+      }
+    }
 
     // Update user stats
     const user = await ctx.db.get(args.userId);

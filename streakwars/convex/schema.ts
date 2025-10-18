@@ -105,13 +105,17 @@ export default defineSchema({
     createdAt: v.number(),
     isPublic: v.optional(v.boolean()), // true = anyone can join, false = invite only
     inviteCode: v.optional(v.string()), // unique code for joining via link/QR
+    allowGroups: v.optional(v.boolean()), // Can groups participate?
+    maxGroups: v.optional(v.number()), // Maximum number of groups
+    groupSizeLimit: v.optional(v.number()), // Maximum members per group
   })
     .index("by_active", ["isActive"])
     .index("by_date_range", ["startDate", "endDate"])
     .index("by_creator", ["createdBy"])
     .index("by_prize_type", ["prizeType"])
     .index("by_public", ["isPublic"])
-    .index("by_invite_code", ["inviteCode"]),
+    .index("by_invite_code", ["inviteCode"])
+    .index("by_allow_groups", ["allowGroups"]),
 
   // Challenge participants table - tracks who's participating in challenges
   challengeParticipants: defineTable({
@@ -126,6 +130,24 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_challenge_user", ["challengeId", "userId"])
     .index("by_challenge_active", ["challengeId", "isActive"]),
+
+    // Challenge Habit Completions table
+  challengeHabitCompletions: defineTable({
+    userId: v.id("users"),
+    challengeId: v.id("challenges"),
+    habitName: v.string(),
+    completedAt: v.number(),
+    pointsEarned: v.number(),
+    isVerified: v.optional(v.boolean()), // Whether the completion has been verified
+    verifiedBy: v.optional(v.id("users")), // Who verified it (for peer verification)
+    verifiedAt: v.optional(v.number()), // When it was verified
+    verificationNotes: v.optional(v.string()), // Optional notes from verifier
+  })
+    .index("by_user", ["userId"])
+    .index("by_challenge", ["challengeId"])
+    .index("by_user_challenge_habit", ["userId", "challengeId", "habitName"])
+    .index("by_date", ["completedAt"])
+    .index("by_verified", ["isVerified"]),
 
   // Challenge completions table - tracks completions within challenges
   challengeCompletions: defineTable({
@@ -176,6 +198,28 @@ export default defineSchema({
     .index("by_challenge", ["challengeId"])
     .index("by_defender_status", ["defenderId", "status"]),
 
+  // Group wars table - stores group vs group wars in challenges
+  groupWars: defineTable({
+    challengerGroupId: v.id("groups"),
+    defenderGroupId: v.id("groups"),
+    challengeId: v.id("challenges"),
+    stakes: v.number(), // Total stakes for the war
+    status: v.string(), // "pending", "accepted", "declined", "active", "completed"
+    warStartedAt: v.optional(v.number()),
+    warEndedAt: v.optional(v.number()),
+    winnerGroupId: v.optional(v.id("groups")),
+    challengerPoints: v.optional(v.number()),
+    defenderPoints: v.optional(v.number()),
+    taunt: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_challenger_group", ["challengerGroupId"])
+    .index("by_defender_group", ["defenderGroupId"])
+    .index("by_challenge", ["challengeId"])
+    .index("by_status", ["status"])
+    .index("by_challenger_group_challenge", ["challengerGroupId", "challengeId"])
+    .index("by_defender_group_challenge", ["defenderGroupId", "challengeId"]),
+
   // War History table - tracks all war outcomes
   warHistory: defineTable({
     warId: v.id("challengeWars"),
@@ -211,6 +255,43 @@ export default defineSchema({
     .index("by_challenge", ["challengeId"])
     .index("by_timestamp", ["timestamp"]),
 
+  // Mini Wars - 2-hour intense habit completion battles
+  miniWars: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    creatorId: v.id("users"),
+    participants: v.array(v.id("users")), // Max 8 participants
+    maxParticipants: v.number(), // Default 8
+    stakes: v.number(), // Rewards per participant
+    status: v.string(), // "waiting", "active", "completed", "cancelled"
+    warStartedAt: v.optional(v.number()),
+    warEndedAt: v.optional(v.number()),
+    winnerId: v.optional(v.id("users")),
+    totalHabitsCompleted: v.optional(v.number()),
+    isPublic: v.boolean(), // Can others discover and join?
+    inviteCode: v.optional(v.string()), // For private mini wars
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_creator", ["creatorId"])
+    .index("by_status", ["status"])
+    .index("by_invite_code", ["inviteCode"])
+    .index("by_public", ["isPublic"])
+    .index("by_created", ["createdAt"]),
+
+  // Mini War Participants - tracks real-time progress
+  miniWarParticipants: defineTable({
+    miniWarId: v.id("miniWars"),
+    userId: v.id("users"),
+    habitsCompleted: v.number(), // Count of habits completed during the war
+    pointsEarned: v.number(), // Total points earned during the war
+    lastCompletionAt: v.optional(v.number()),
+    joinedAt: v.number(),
+  })
+    .index("by_mini_war", ["miniWarId"])
+    .index("by_user", ["userId"])
+    .index("by_mini_war_user", ["miniWarId", "userId"]),
+
   // AI Humiliation System
   aiHumiliations: defineTable({
     warId: v.id("challengeWars"),
@@ -242,6 +323,50 @@ export default defineSchema({
     .index("by_user_friend", ["userId", "friendId"])
     .index("by_status", ["status"])
     .index("by_user_status", ["userId", "status"]),
+
+  // Groups table - stores team/group information
+  groups: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    leaderId: v.id("users"), // Group leader/admin
+    isPublic: v.optional(v.boolean()), // Can others join without invitation?
+    maxMembers: v.optional(v.number()), // Maximum number of members
+    category: v.optional(v.string()), // "hackathon", "friends", "work", "fitness", etc.
+    inviteCode: v.optional(v.string()), // Unique code for joining
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_leader", ["leaderId"])
+    .index("by_invite_code", ["inviteCode"])
+    .index("by_category", ["category"])
+    .index("by_public", ["isPublic"]),
+
+  // Group members table - stores group membership
+  groupMembers: defineTable({
+    groupId: v.id("groups"),
+    userId: v.id("users"),
+    role: v.string(), // "leader", "member", "admin"
+    joinedAt: v.number(),
+    status: v.string(), // "active", "inactive", "banned"
+  })
+    .index("by_group", ["groupId"])
+    .index("by_user", ["userId"])
+    .index("by_group_user", ["groupId", "userId"])
+    .index("by_role", ["role"])
+    .index("by_status", ["status"]),
+
+  // Group challenge participation - groups participating in challenges
+  groupChallengeParticipants: defineTable({
+    groupId: v.id("groups"),
+    challengeId: v.id("challenges"),
+    totalPoints: v.number(), // Combined points of all group members
+    isActive: v.boolean(),
+    joinedAt: v.number(),
+  })
+    .index("by_group", ["groupId"])
+    .index("by_challenge", ["challengeId"])
+    .index("by_group_challenge", ["groupId", "challengeId"])
+    .index("by_active", ["isActive"]),
 
   // Notifications table - stores user notifications
   notifications: defineTable({
