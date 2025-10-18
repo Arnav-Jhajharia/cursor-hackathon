@@ -1,9 +1,10 @@
 "use client";
 
-import { useMutation } from "convex/react";
+import { useMutation, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useState } from "react";
+import SmartAutocomplete from "./SmartAutocomplete";
 
 interface AddHabitModalProps {
   userId: Id<"users">;
@@ -23,7 +24,14 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [isGeneratingHabits, setIsGeneratingHabits] = useState(false);
+  const [generatedHabits, setGeneratedHabits] = useState<any[]>([]);
+  const [showGeneratedHabits, setShowGeneratedHabits] = useState(false);
+  
   const createHabit = useMutation(api.habits.createHabit);
+  const generateHabitDescriptionAction = useAction(api.habitGenerationActions.generateHabitDescriptionAction);
+  const generateHabitIdeasAction = useAction(api.habitGenerationActions.generateHabitIdeasAction);
 
   const categories = [
     "health",
@@ -102,12 +110,55 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
     }));
   };
 
+  // Auto-generate description when name field loses focus
+  const handleNameBlur = async () => {
+    if (formData.name.trim() && !formData.description.trim()) {
+      setIsGeneratingDescription(true);
+      try {
+        const result = await generateHabitDescriptionAction({ habitName: formData.name });
+        if (result.success) {
+          setFormData(prev => ({ ...prev, description: result.data }));
+        }
+      } catch (error) {
+        console.error("Error generating description:", error);
+      } finally {
+        setIsGeneratingDescription(false);
+      }
+    }
+  };
+
+  // Generate habit ideas
+  const handleGenerateHabits = async () => {
+    setIsGeneratingHabits(true);
+    try {
+      const result = await generateHabitIdeasAction({});
+      if (result.success && result.data.length > 0) {
+        setGeneratedHabits(result.data);
+        setShowGeneratedHabits(true);
+      }
+    } catch (error) {
+      console.error("Error generating habits:", error);
+    } finally {
+      setIsGeneratingHabits(false);
+    }
+  };
+
+  // Add generated habit to form
+  const handleAddGeneratedHabit = (habit: any) => {
+    setFormData(prev => ({
+      ...prev,
+      name: habit.title,
+      description: habit.summary,
+    }));
+    setShowGeneratedHabits(false);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-slate-900">Add New Habit</h2>
+            <h2 className="text-2xl font-bold text-black">Add New Habit</h2>
             <button
               onClick={onClose}
               className="text-slate-400 hover:text-slate-600 transition-colors"
@@ -119,25 +170,38 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Generate Habits Button */}
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-black">Create New Habit</h3>
+              <button
+                type="button"
+                onClick={handleGenerateHabits}
+                disabled={isGeneratingHabits}
+                className="px-3 py-1.5 bg-purple-100 text-purple-700 text-sm font-medium rounded-lg hover:bg-purple-200 disabled:opacity-50 transition-colors"
+              >
+                {isGeneratingHabits ? "Generating..." : "✨ Generate Ideas"}
+              </button>
+            </div>
+
             <div>
-              <label htmlFor="name" className="block text-sm font-semibold text-slate-700 mb-2">
+              <label htmlFor="name" className="block text-sm font-semibold text-black mb-2">
                 Habit Name
               </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
+              <SmartAutocomplete
                 value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                onChange={(value) => setFormData(prev => ({ ...prev, name: value }))}
+                onBlur={handleNameBlur}
                 placeholder="e.g., Exercise for 30 minutes"
+                className="w-full"
               />
             </div>
 
             <div>
-              <label htmlFor="description" className="block text-sm font-semibold text-slate-700 mb-2">
+              <label htmlFor="description" className="block text-sm font-semibold text-black mb-2">
                 Description
+                {isGeneratingDescription && (
+                  <span className="ml-2 text-xs text-indigo-600">Auto-generating...</span>
+                )}
               </label>
               <textarea
                 id="description"
@@ -145,13 +209,13 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
                 value={formData.description}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none text-black"
                 placeholder="Optional details about your habit"
               />
             </div>
 
             <div>
-              <label htmlFor="category" className="block text-sm font-semibold text-slate-700 mb-2">
+              <label htmlFor="category" className="block text-sm font-semibold text-black mb-2">
                 Category
               </label>
               <select
@@ -160,7 +224,7 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
                 value={formData.category}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-white"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-white text-black"
               >
                 {categories.map((category) => (
                   <option key={category} value={category}>
@@ -171,7 +235,7 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
             </div>
 
             <div>
-              <label htmlFor="targetFrequency" className="block text-sm font-semibold text-slate-700 mb-2">
+              <label htmlFor="targetFrequency" className="block text-sm font-semibold text-black mb-2">
                 Frequency
               </label>
               <select
@@ -180,7 +244,7 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
                 value={formData.targetFrequency}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-white"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-white text-black"
               >
                 {frequencies.map((freq) => (
                   <option key={freq.value} value={freq.value}>
@@ -192,7 +256,7 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
 
             {formData.targetFrequency === "custom" && (
               <div>
-                <label htmlFor="customFrequency" className="block text-sm font-semibold text-slate-700 mb-2">
+                <label htmlFor="customFrequency" className="block text-sm font-semibold text-black mb-2">
                   Custom Frequency
                 </label>
                 <input
@@ -202,14 +266,14 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
                   value={formData.customFrequency}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-black"
                   placeholder="e.g., 3 times per week"
                 />
               </div>
             )}
 
             <div>
-              <label htmlFor="pointsPerCompletion" className="block text-sm font-semibold text-slate-700 mb-2">
+              <label htmlFor="pointsPerCompletion" className="block text-sm font-semibold text-black mb-2">
                 Points per Completion
               </label>
               <input
@@ -221,12 +285,12 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
                 required
                 min="1"
                 max="100"
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-black"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-semibold text-black mb-2">
                 Integrations (optional)
               </label>
               <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-slate-300 rounded-lg p-3">
@@ -250,7 +314,7 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
                       }}
                       className="w-3 h-3 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
                     />
-                    <span className="text-slate-700">{integration.label}</span>
+                    <span className="text-black">{integration.label}</span>
                   </label>
                 ))}
               </div>
@@ -265,7 +329,7 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
                 onChange={(e) => setFormData({ ...formData, isPublic: e.target.checked })}
                 className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
               />
-              <label htmlFor="isPublic" className="text-sm font-medium text-slate-700">
+              <label htmlFor="isPublic" className="text-sm font-medium text-black">
                 Make this habit public (others can discover and remix it)
               </label>
             </div>
@@ -274,7 +338,7 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition-all"
+                className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-black font-medium hover:bg-gray-50 transition-all"
               >
                 Cancel
               </button>
@@ -289,6 +353,69 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
           </form>
         </div>
       </div>
+
+      {/* Generated Habits Modal */}
+      {showGeneratedHabits && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-60">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-black">Generated Habit Ideas</h3>
+                <button
+                  onClick={() => setShowGeneratedHabits(false)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {generatedHabits.map((habit, index) => (
+                  <div
+                    key={index}
+                    className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 transition-colors cursor-pointer"
+                    onClick={() => handleAddGeneratedHabit(habit)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-black mb-1">{habit.title}</h4>
+                        <p className="text-sm text-black mb-2">{habit.summary}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                            {habit.category}
+                          </span>
+                          <span className="text-xs text-gray-400">{habit.source}</span>
+                        </div>
+                      </div>
+                      <button className="ml-2 px-3 py-1 bg-indigo-100 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-200 transition-colors">
+                        Use This
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => setShowGeneratedHabits(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-black font-medium hover:bg-gray-50 transition-all"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={handleGenerateHabits}
+                  disabled={isGeneratingHabits}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-all"
+                >
+                  {isGeneratingHabits ? "Generating..." : "Generate More"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
