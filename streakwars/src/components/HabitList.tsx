@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import ConfidenceBar from "./ConfidenceBar";
 import VerificationModal from "./VerificationModal";
 
@@ -53,6 +54,7 @@ const CoinAnimation = ({ show, points }: { show: boolean; points: number }) => {
 };
 
 export default function HabitList({ userId }: HabitListProps) {
+  const router = useRouter();
   const habits = useQuery(api.habits.getUserHabitsWithChallenges, { userId });
   const todayCompletions = useQuery(api.habitCompletions.getTodayCompletions, { userId });
   const completeHabit = useMutation(api.habitCompletions.completeHabit);
@@ -215,16 +217,17 @@ export default function HabitList({ userId }: HabitListProps) {
           return (
             <div
               key={habit._id}
-              className={`bg-white rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
+              className={`bg-white rounded-xl p-4 border transition-all duration-200 hover:shadow-lg cursor-pointer group ${
                 completed && completion?.verificationStatus === "rejected"
                   ? "border-red-300 bg-red-50"
                   : "border-gray-200 hover:border-indigo-300"
               }`}
+              onClick={() => router.push(`/habits/${habit._id}`)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-gray-900">
+                    <h3 className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
                       {habit.name}
                     </h3>
                     {isChallengeHabit && (
@@ -240,7 +243,7 @@ export default function HabitList({ userId }: HabitListProps) {
                   </div>
                   
                   {habit.description && (
-                    <p className="text-sm text-gray-600 mb-2">
+                    <p className="text-sm text-gray-600 mb-2 group-hover:text-gray-700 transition-colors">
                       {habit.description}
                     </p>
                   )}
@@ -248,41 +251,46 @@ export default function HabitList({ userId }: HabitListProps) {
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-gray-500">🪙 +{habit.pointsPerCompletion}</span>
                     {getVerificationStatusIcon(getTodayCompletion(habit._id))}
+                    <span className="text-xs text-gray-400 group-hover:text-indigo-500 transition-colors">
+                      Click to view details →
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Verify Button */}
-                  {isCompletedToday(habit._id) && (
+                  {/* Quick Complete Button - only show if not completed */}
+                  {!isCompletedToday(habit._id) && (
                     <button
-                      onClick={() => {
-                        const completion = getTodayCompletion(habit._id);
-                        if (completion && completion.verificationStatus !== "verified") {
-                          handleVerifyHabit(completion._id, habit.name);
-                        }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleCompletion(habit._id);
                       }}
-                      className="px-3 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                      disabled={loading}
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 transform active:scale-95 ${
+                        loading
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md"
+                      }`}
                     >
-                      Verify
+                      {loading ? (
+                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        "Complete"
+                      )}
                     </button>
                   )}
 
-                  {/* Complete Button */}
-                  <button
-                    onClick={() => handleToggleCompletion(habit._id)}
-                    disabled={loading}
-                    className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 transform active:scale-95 ${
-                      loading
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md"
-                    }`}
-                  >
-                    {loading ? (
-                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                      "Complete"
-                    )}
-                  </button>
+                  {/* Completed indicator */}
+                  {isCompletedToday(habit._id) && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <span className="text-sm text-green-600 font-medium">Completed</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -298,16 +306,17 @@ export default function HabitList({ userId }: HabitListProps) {
           return (
             <div
               key={habit._id}
-              className={`bg-gray-50 rounded-xl p-4 border border-gray-200 opacity-75 ${
+              className={`bg-green-50 rounded-xl p-4 border border-green-200 cursor-pointer hover:shadow-md transition-all duration-200 group ${
                 completion?.verificationStatus === "rejected"
                   ? "border-red-300 bg-red-50"
                   : ""
               }`}
+              onClick={() => router.push(`/habits/${habit._id}`)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-gray-500 line-through">
+                    <h3 className="font-semibold text-green-700 group-hover:text-green-800 transition-colors">
                       {habit.name}
                     </h3>
                     {isChallengeHabit && (
@@ -323,31 +332,27 @@ export default function HabitList({ userId }: HabitListProps) {
                   </div>
                   
                   {habit.description && (
-                    <p className="text-sm text-gray-400 mb-2 line-through">
+                    <p className="text-sm text-green-600 mb-2 group-hover:text-green-700 transition-colors">
                       {habit.description}
                     </p>
                   )}
 
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-400">🪙 +{habit.pointsPerCompletion}</span>
+                    <span className="text-sm text-green-600">🪙 +{habit.pointsPerCompletion}</span>
                     {getVerificationStatusIcon(completion)}
+                    <span className="text-xs text-green-500 group-hover:text-green-600 transition-colors">
+                      Click to verify/manage →
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Verify Button */}
-                  {completion && completion.verificationStatus !== "verified" && (
-                    <button
-                      onClick={() => handleVerifyHabit(completion._id, habit.name)}
-                      className="px-3 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
-                    >
-                      Verify
-                    </button>
-                  )}
-
-                  {/* Undo Button */}
+                  {/* Quick Undo Button */}
                   <button
-                    onClick={() => handleToggleCompletion(habit._id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleCompletion(habit._id);
+                    }}
                     disabled={loading}
                     className={`px-3 py-1 rounded-lg font-medium text-xs transition-all duration-200 ${
                       loading
@@ -361,6 +366,16 @@ export default function HabitList({ userId }: HabitListProps) {
                       "Undo"
                     )}
                   </button>
+
+                  {/* Completed indicator */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-sm text-green-600 font-medium">Completed</span>
+                  </div>
                 </div>
               </div>
             </div>

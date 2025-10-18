@@ -158,6 +158,81 @@ export const deleteHabit = mutation({
   },
 });
 
+// Get all habit completions for a habit (no date restrictions)
+export const getAllHabitCompletions = query({
+  args: {
+    habitId: v.id("habits"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("habitCompletions")
+      .withIndex("by_habit", (q) => q.eq("habitId", args.habitId))
+      .order("desc")
+      .collect();
+  },
+});
+
+// Get challenges that use a specific habit
+export const getHabitChallenges = query({
+  args: {
+    habitId: v.id("habits"),
+  },
+  handler: async (ctx, args) => {
+    // Get the habit first to find its name
+    const habit = await ctx.db.get(args.habitId);
+    if (!habit) {
+      return [];
+    }
+
+    // Find challenges that include this habit in their targetHabits
+    const challenges = await ctx.db
+      .query("challenges")
+      .filter((q) => 
+        q.eq(q.field("isActive"), true)
+      )
+      .collect();
+
+    // Filter challenges that include this habit's name in their targetHabits
+    const matchingChallenges = challenges.filter(challenge => 
+      challenge.targetHabits.includes(habit.name)
+    );
+
+    return matchingChallenges;
+  },
+});
+
+// Complete a habit
+export const completeHabit = mutation({
+  args: {
+    habitId: v.id("habits"),
+    userId: v.id("users"),
+    points: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    
+    // Create habit completion record
+    const completionId = await ctx.db.insert("habitCompletions", {
+      habitId: args.habitId,
+      userId: args.userId,
+      pointsEarned: args.points,
+      completedAt: now,
+      verificationStatus: "none",
+    });
+
+    // Update user's total points
+    const user = await ctx.db.get(args.userId);
+    if (user) {
+      await ctx.db.patch(args.userId, {
+        totalPoints: (user.totalPoints || 0) + args.points,
+        updatedAt: now,
+      });
+    }
+
+    return { completionId, points: args.points };
+  },
+});
+
 // Get habit completions for a specific date range
 export const getHabitCompletions = query({
   args: {
@@ -170,8 +245,8 @@ export const getHabitCompletions = query({
       .query("habitCompletions")
       .withIndex("by_habit_date", (q) => 
         q.eq("habitId", args.habitId)
-         .gte("completedAt", args.startDate)
-         .lte("completedAt", args.endDate)
+          .gte("completedAt", args.startDate)
+          .lte("completedAt", args.endDate)
       )
       .collect();
   },

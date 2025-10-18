@@ -234,7 +234,11 @@ export default function HabitsPage() {
                   {/* Habits grid */}
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredPublicHabits.map((habit: any) => (
-                      <div key={habit._id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <div 
+                        key={habit._id} 
+                        className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => router.push(`/habits/${habit._id}`)}
+                      >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-1">
