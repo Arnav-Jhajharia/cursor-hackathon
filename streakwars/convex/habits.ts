@@ -45,6 +45,7 @@ export const createHabit = mutation({
     pointsPerCompletion: v.number(),
     isPublic: v.optional(v.boolean()),
     originalHabitId: v.optional(v.id("habits")),
+    integrations: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -72,6 +73,7 @@ export const createHabit = mutation({
       isPublic: args.isPublic || false,
       originalHabitId: args.originalHabitId,
       remixCount: 0,
+      integrations: args.integrations || [],
       createdAt: now,
       updatedAt: now,
     });
@@ -285,6 +287,7 @@ export const remixHabit = mutation({
       isPublic: false, // Remixed habits are private by default
       originalHabitId: args.originalHabitId,
       remixCount: 0,
+      integrations: originalHabit.integrations || [], // Copy integrations from original
       createdAt: now,
       updatedAt: now,
     });

@@ -18,6 +18,8 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
     targetFrequency: "daily",
     customFrequency: "",
     pointsPerCompletion: 10,
+    isPublic: false,
+    integrations: [] as string[],
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,6 +42,33 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
     { value: "custom", label: "Custom" },
   ];
 
+  const availableIntegrations = [
+    { value: "apple_health", label: "Apple Health" },
+    { value: "google_fit", label: "Google Fit" },
+    { value: "strava", label: "Strava" },
+    { value: "myfitnesspal", label: "MyFitnessPal" },
+    { value: "fitbit", label: "Fitbit" },
+    { value: "headspace", label: "Headspace" },
+    { value: "calm", label: "Calm" },
+    { value: "duolingo", label: "Duolingo" },
+    { value: "babbel", label: "Babbel" },
+    { value: "leetcode_api", label: "LeetCode API" },
+    { value: "github", label: "GitHub" },
+    { value: "goodreads", label: "Goodreads" },
+    { value: "kindle", label: "Kindle" },
+    { value: "notion", label: "Notion" },
+    { value: "obsidian", label: "Obsidian" },
+    { value: "spotify", label: "Spotify" },
+    { value: "youtube", label: "YouTube" },
+    { value: "yousician", label: "Yousician" },
+    { value: "screen_time", label: "Screen Time" },
+    { value: "rescuetime", label: "RescueTime" },
+    { value: "water_reminder", label: "Water Reminder" },
+    { value: "yoga_app", label: "Yoga App" },
+    { value: "vscode", label: "VS Code" },
+    { value: "llm", label: "AI Assistant" },
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -53,6 +82,8 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
         targetFrequency: formData.targetFrequency,
         customFrequency: formData.targetFrequency === "custom" ? formData.customFrequency : undefined,
         pointsPerCompletion: formData.pointsPerCompletion,
+        isPublic: formData.isPublic,
+        integrations: formData.integrations,
       });
       
       onClose();
@@ -192,6 +223,51 @@ export default function AddHabitModal({ userId, onClose }: AddHabitModalProps) {
                 max="100"
                 className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Integrations (optional)
+              </label>
+              <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-slate-300 rounded-lg p-3">
+                {availableIntegrations.map((integration) => (
+                  <label key={integration.value} className="flex items-center space-x-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={formData.integrations.includes(integration.value)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormData({
+                            ...formData,
+                            integrations: [...formData.integrations, integration.value],
+                          });
+                        } else {
+                          setFormData({
+                            ...formData,
+                            integrations: formData.integrations.filter(i => i !== integration.value),
+                          });
+                        }
+                      }}
+                      className="w-3 h-3 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                    />
+                    <span className="text-slate-700">{integration.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                id="isPublic"
+                name="isPublic"
+                checked={formData.isPublic}
+                onChange={(e) => setFormData({ ...formData, isPublic: e.target.checked })}
+                className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+              />
+              <label htmlFor="isPublic" className="text-sm font-medium text-slate-700">
+                Make this habit public (others can discover and remix it)
+              </label>
             </div>
 
             <div className="flex gap-3 pt-4">

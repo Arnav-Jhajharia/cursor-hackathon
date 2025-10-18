@@ -30,6 +30,7 @@ export default defineSchema({
     isPublic: v.optional(v.boolean()), // Whether this habit can be remixed by others
     originalHabitId: v.optional(v.id("habits")), // If this is a remix, reference to original
     remixCount: v.optional(v.number()), // How many times this habit has been remixed
+    integrations: v.optional(v.array(v.string())), // API integrations like "strava", "apple_health", "llm", etc.
     createdAt: v.number(),
     updatedAt: v.number(),
   })

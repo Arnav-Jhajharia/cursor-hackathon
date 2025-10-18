@@ -17,6 +17,7 @@ import type * as friends from "../friends.js";
 import type * as habitCompletions from "../habitCompletions.js";
 import type * as habits from "../habits.js";
 import type * as notifications from "../notifications.js";
+import type * as seedHabits from "../seedHabits.js";
 import type * as users from "../users.js";
 
 import type {
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   habitCompletions: typeof habitCompletions;
   habits: typeof habits;
   notifications: typeof notifications;
+  seedHabits: typeof seedHabits;
   users: typeof users;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
