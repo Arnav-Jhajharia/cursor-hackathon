@@ -131,24 +131,6 @@ export default defineSchema({
     .index("by_challenge_user", ["challengeId", "userId"])
     .index("by_challenge_active", ["challengeId", "isActive"]),
 
-    // Challenge Habit Completions table
-  challengeHabitCompletions: defineTable({
-    userId: v.id("users"),
-    challengeId: v.id("challenges"),
-    habitName: v.string(),
-    completedAt: v.number(),
-    pointsEarned: v.number(),
-    isVerified: v.optional(v.boolean()), // Whether the completion has been verified
-    verifiedBy: v.optional(v.id("users")), // Who verified it (for peer verification)
-    verifiedAt: v.optional(v.number()), // When it was verified
-    verificationNotes: v.optional(v.string()), // Optional notes from verifier
-  })
-    .index("by_user", ["userId"])
-    .index("by_challenge", ["challengeId"])
-    .index("by_user_challenge_habit", ["userId", "challengeId", "habitName"])
-    .index("by_date", ["completedAt"])
-    .index("by_verified", ["isVerified"]),
-
   // Challenge completions table - tracks completions within challenges
   challengeCompletions: defineTable({
     challengeId: v.id("challenges"),
@@ -254,43 +236,6 @@ export default defineSchema({
     .index("by_opponent", ["opponentId"])
     .index("by_challenge", ["challengeId"])
     .index("by_timestamp", ["timestamp"]),
-
-  // Mini Wars - 2-hour intense habit completion battles
-  miniWars: defineTable({
-    name: v.string(),
-    description: v.optional(v.string()),
-    creatorId: v.id("users"),
-    participants: v.array(v.id("users")), // Max 8 participants
-    maxParticipants: v.number(), // Default 8
-    stakes: v.number(), // Rewards per participant
-    status: v.string(), // "waiting", "active", "completed", "cancelled"
-    warStartedAt: v.optional(v.number()),
-    warEndedAt: v.optional(v.number()),
-    winnerId: v.optional(v.id("users")),
-    totalHabitsCompleted: v.optional(v.number()),
-    isPublic: v.boolean(), // Can others discover and join?
-    inviteCode: v.optional(v.string()), // For private mini wars
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_creator", ["creatorId"])
-    .index("by_status", ["status"])
-    .index("by_invite_code", ["inviteCode"])
-    .index("by_public", ["isPublic"])
-    .index("by_created", ["createdAt"]),
-
-  // Mini War Participants - tracks real-time progress
-  miniWarParticipants: defineTable({
-    miniWarId: v.id("miniWars"),
-    userId: v.id("users"),
-    habitsCompleted: v.number(), // Count of habits completed during the war
-    pointsEarned: v.number(), // Total points earned during the war
-    lastCompletionAt: v.optional(v.number()),
-    joinedAt: v.number(),
-  })
-    .index("by_mini_war", ["miniWarId"])
-    .index("by_user", ["userId"])
-    .index("by_mini_war_user", ["miniWarId", "userId"]),
 
   // AI Humiliation System
   aiHumiliations: defineTable({

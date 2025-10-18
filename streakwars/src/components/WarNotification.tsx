@@ -4,7 +4,6 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 interface WarNotificationProps {
   war: any;
@@ -13,7 +12,6 @@ interface WarNotificationProps {
 
 export default function WarNotification({ war, onWarResolved }: WarNotificationProps) {
   const [isResponding, setIsResponding] = useState(false);
-  const router = useRouter();
   const acceptWar = useMutation(api.challengeWars.acceptWar);
   const declineWar = useMutation(api.challengeWars.declineWar);
 
@@ -26,8 +24,6 @@ export default function WarNotification({ war, onWarResolved }: WarNotificationP
     try {
       await acceptWar({ warId: war._id });
       onWarResolved();
-      // Redirect to live war page
-      router.push(`/war/${war._id}`);
     } catch (error: any) {
       alert(error.message || "Error accepting war");
     } finally {

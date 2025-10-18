@@ -11,7 +11,7 @@ import AddHabitModal from "../../components/AddHabitModal";
 export default function HabitsPage() {
   const { user } = useUser();
   const [showAddHabit, setShowAddHabit] = useState(false);
-  const [activeTab, setActiveTab] = useState<"my-habits" | "challenge-habits" | "discover">("my-habits");
+  const [activeTab, setActiveTab] = useState<"my-habits" | "discover">("my-habits");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   // Get or create user
@@ -22,20 +22,8 @@ export default function HabitsPage() {
 
   // Get public habits for discovery
   const publicHabits = useQuery(api.habits.getPublicHabits, { limit: 20 });
-  const challengeHabits = useQuery(api.challenges.getUserChallengeHabits, 
-    currentUser ? { userId: currentUser._id } : "skip"
-  );
   const remixHabit = useMutation(api.habits.remixHabit);
   const createSampleHabits = useMutation(api.seedHabits.createSimpleSampleHabits);
-  const completeHabit = useMutation(api.habitCompletions.completeHabit);
-  const completeChallengeHabit = useMutation(api.challenges.completeChallengeHabit);
-  const verifyChallengeHabitCompletion = useMutation(api.challenges.verifyChallengeHabitCompletion);
-  const unverifiedCompletions = useQuery(api.challenges.getUnverifiedChallengeCompletions, 
-    currentUser ? { userId: currentUser._id } : "skip"
-  );
-  const completionsNeedingVerification = useQuery(api.challenges.getCompletionsNeedingVerification, 
-    currentUser ? { userId: currentUser._id } : "skip"
-  );
 
   const categories = [
     { value: "all", label: "All Categories", icon: "🏠" },
@@ -78,49 +66,6 @@ export default function HabitsPage() {
     }
   };
 
-  const handleCompleteChallengeHabit = async (habitName: string) => {
-    if (!currentUser) return;
-    try {
-      const result = await completeChallengeHabit({
-        userId: currentUser._id,
-        habitName,
-      });
-      
-      alert(`✅ Completed "${habitName}" for ${result.completionsCreated} challenge(s)! Earned ${result.pointsEarned} points.`);
-    } catch (error) {
-      console.error("Error completing challenge habit:", error);
-      const errorMessage = (error as Error).message;
-      
-      if (errorMessage.includes("already completed")) {
-        alert(`🔥 You've already completed "${habitName}" today!`);
-      } else {
-        alert("Error completing challenge habit: " + errorMessage);
-      }
-    }
-  };
-
-  const handleVerifyCompletion = async (completionId: string) => {
-    if (!currentUser) return;
-    try {
-      const result = await verifyChallengeHabitCompletion({
-        completionId: completionId as any,
-        verifierId: currentUser._id,
-        verificationNotes: "Verified by peer",
-      });
-      
-      alert(`✅ Verified completion! Earned ${result.bonusPoints} bonus points.`);
-    } catch (error) {
-      console.error("Error verifying completion:", error);
-      const errorMessage = (error as Error).message;
-      
-      if (errorMessage.includes("already been verified")) {
-        alert(`🔥 This completion has already been verified!`);
-      } else {
-        alert("Error verifying completion: " + errorMessage);
-      }
-    }
-  };
-
   if (!currentUser) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -149,16 +94,6 @@ export default function HabitsPage() {
             }`}
           >
             My Habits
-          </button>
-          <button
-            onClick={() => setActiveTab("challenge-habits")}
-            className={`flex-1 py-3 px-6 rounded-lg font-semibold text-sm transition-all ${
-              activeTab === "challenge-habits"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Challenge Habits
           </button>
           <button
             onClick={() => setActiveTab("discover")}
@@ -215,170 +150,6 @@ export default function HabitsPage() {
               </div>
             </div>
           </>
-        )}
-
-        {/* Challenge Habits Tab */}
-        {activeTab === "challenge-habits" && (
-          <div className="space-y-6">
-            {/* Challenge Habits Section */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900">Challenge Habits</h2>
-                <p className="text-gray-600 text-sm mt-1">Complete habits from your active challenges</p>
-              </div>
-            <div className="p-6">
-              {!challengeHabits || challengeHabits.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="text-6xl mb-4 opacity-50">🏆</div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Challenge Habits</h3>
-                  <p className="text-gray-500 text-sm mb-6">Join some challenges to see their habits here!</p>
-                  <button
-                    onClick={() => window.location.href = "/challenges"}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors"
-                  >
-                    Browse Challenges
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="text-sm text-gray-600">
-                    Showing {challengeHabits.length} challenge habits
-                  </div>
-                  
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {challengeHabits.map((habit: any, index: number) => (
-                      <div key={index} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <span className="text-lg">🏆</span>
-                              <h3 className="font-semibold text-gray-900">{habit.name}</h3>
-                            </div>
-                            <div className="text-sm text-gray-600 mb-2">
-                              From {habit.challenges.length} challenge{habit.challenges.length > 1 ? 's' : ''}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-xs text-gray-500">Points</div>
-                            <div className="font-bold text-blue-600">{habit.pointsPerCompletion}</div>
-                          </div>
-                        </div>
-                        
-                        <div className="mb-3">
-                          <div className="text-xs text-gray-500 mb-1">Related Challenges:</div>
-                          <div className="space-y-1">
-                            {habit.challenges.slice(0, 2).map((challenge: any) => (
-                              <div key={challenge.id} className="flex items-center justify-between">
-                                <span className="text-sm text-gray-700 truncate">{challenge.name}</span>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  challenge.isActive 
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-gray-100 text-gray-700"
-                                }`}>
-                                  {challenge.isActive ? "active" : "inactive"}
-                                </span>
-                              </div>
-                            ))}
-                            {habit.challenges.length > 2 && (
-                              <div className="text-xs text-gray-500">
-                                +{habit.challenges.length - 2} more challenges
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
-                                🏆 Challenge Habit
-                              </span>
-                              <span className="text-xs text-gray-500">{habit.targetFrequency}</span>
-                            </div>
-                            <button
-                              onClick={() => handleCompleteChallengeHabit(habit.name)}
-                              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg font-semibold text-xs hover:bg-blue-700 transition-colors"
-                            >
-                              Complete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            </div>
-
-            {/* Unverified Completions Section */}
-            {unverifiedCompletions && unverifiedCompletions.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-xl font-semibold text-gray-900">Pending Verification</h2>
-                  <p className="text-gray-600 text-sm mt-1">Your completions waiting for verification</p>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-3">
-                    {unverifiedCompletions.map((completion: any) => (
-                      <div key={completion._id} className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-semibold text-gray-900">{completion.habitName}</div>
-                            <div className="text-sm text-gray-600">
-                              Challenge: {completion.challenge?.name}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Completed: {new Date(completion.completedAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm text-yellow-600 font-medium">Pending</div>
-                            <div className="text-xs text-gray-500">Awaiting verification</div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Completions Needing Verification Section */}
-            {completionsNeedingVerification && completionsNeedingVerification.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-xl font-semibold text-gray-900">Verify Others</h2>
-                  <p className="text-gray-600 text-sm mt-1">Help verify completions from other participants</p>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-3">
-                    {completionsNeedingVerification.map((completion: any) => (
-                      <div key={completion._id} className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-semibold text-gray-900">{completion.habitName}</div>
-                            <div className="text-sm text-gray-600">
-                              By: {completion.user?.name} • Challenge: {completion.challenge?.name}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Completed: {new Date(completion.completedAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleVerifyCompletion(completion._id)}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 transition-colors"
-                          >
-                            ✅ Verify
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
         )}
 
         {/* Discover Tab */}
