@@ -10,12 +10,14 @@
 
 import type * as aiHumiliation from "../aiHumiliation.js";
 import type * as aiMemory from "../aiMemory.js";
+import type * as aiSabotageActions from "../aiSabotageActions.js";
 import type * as aiSocialDestruction from "../aiSocialDestruction.js";
+import type * as challengeHabits from "../challengeHabits.js";
 import type * as challengeInvites from "../challengeInvites.js";
 import type * as challengeSets from "../challengeSets.js";
 import type * as challengeWars from "../challengeWars.js";
 import type * as challenges from "../challenges.js";
-import type * as confessional from "../confessional.js";
+import type * as cleanup from "../cleanup.js";
 import type * as cronHandlers from "../cronHandlers.js";
 import type * as crons from "../crons.js";
 import type * as customChallengeHabits from "../customChallengeHabits.js";
@@ -54,12 +56,14 @@ import type {
 declare const fullApi: ApiFromModules<{
   aiHumiliation: typeof aiHumiliation;
   aiMemory: typeof aiMemory;
+  aiSabotageActions: typeof aiSabotageActions;
   aiSocialDestruction: typeof aiSocialDestruction;
+  challengeHabits: typeof challengeHabits;
   challengeInvites: typeof challengeInvites;
   challengeSets: typeof challengeSets;
   challengeWars: typeof challengeWars;
   challenges: typeof challenges;
-  confessional: typeof confessional;
+  cleanup: typeof cleanup;
   cronHandlers: typeof cronHandlers;
   crons: typeof crons;
   customChallengeHabits: typeof customChallengeHabits;

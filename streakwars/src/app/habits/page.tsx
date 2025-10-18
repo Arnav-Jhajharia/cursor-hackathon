@@ -8,12 +8,13 @@ import { Id } from "../../../convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import HabitList from "../../components/HabitList";
 import AddHabitModal from "../../components/AddHabitModal";
+import ChallengeHabitItem from "../../components/ChallengeHabitItem";
 
 export default function HabitsPage() {
   const { user } = useUser();
   const router = useRouter();
   const [showAddHabit, setShowAddHabit] = useState(false);
-  const [activeTab, setActiveTab] = useState<"my-habits" | "discover">("my-habits");
+  const [activeTab, setActiveTab] = useState<"my-habits" | "challenge-habits" | "discover">("my-habits");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   // Get or create user
@@ -27,6 +28,13 @@ export default function HabitsPage() {
   const remixHabit = useMutation(api.habits.remixHabit);
   const createSampleHabits = useMutation(api.seedHabits.createSimpleSampleHabits);
   const createPublicHabits = useMutation(api.seedHabits.createSamplePublicHabits);
+
+  // Challenge habits
+  const userChallenges = useQuery(api.habitChallenges.getUserChallenges, 
+    currentUser ? { userId: currentUser._id } : "skip"
+  );
+  const createHabitFromChallenge = useMutation(api.challengeHabits.createHabitFromChallenge);
+  const completeChallengeHabit = useMutation(api.challengeHabits.completeChallengeHabit);
 
   const categories = [
     { value: "all", label: "All Categories", icon: "🏠" },
@@ -99,6 +107,16 @@ export default function HabitsPage() {
             My Habits
           </button>
           <button
+            onClick={() => setActiveTab("challenge-habits")}
+            className={`flex-1 py-3 px-6 rounded-lg font-semibold text-sm transition-all ${
+              activeTab === "challenge-habits"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Challenge Habits
+          </button>
+          <button
             onClick={() => setActiveTab("discover")}
             className={`flex-1 py-3 px-6 rounded-lg font-semibold text-sm transition-all ${
               activeTab === "discover"
@@ -153,6 +171,64 @@ export default function HabitsPage() {
               </div>
             </div>
           </>
+        )}
+
+        {/* Challenge Habits Tab */}
+        {activeTab === "challenge-habits" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900">Challenge Habits</h2>
+                <p className="text-gray-600 text-sm mt-1">Complete habits from your active challenges</p>
+              </div>
+              
+              <div className="p-6">
+                {userChallenges && userChallenges.length > 0 ? (
+                  <div className="space-y-6">
+                    {userChallenges.map((challenge: any) => (
+                      <div key={challenge._id} className="border border-gray-200 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{challenge.name}</h3>
+                            <p className="text-sm text-gray-600">{challenge.description}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-gray-500">Target Habits</div>
+                            <div className="font-semibold text-blue-600">{challenge.targetHabits.length}</div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {challenge.targetHabits.map((habitName: string) => (
+                            <ChallengeHabitItem
+                              key={habitName}
+                              habitName={habitName}
+                              challengeId={challenge._id}
+                              userId={currentUser._id}
+                              onCreateHabit={createHabitFromChallenge}
+                              onCompleteHabit={completeChallengeHabit}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">🏆</div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Challenges</h3>
+                    <p className="text-gray-600 mb-4">Join a challenge to see challenge-specific habits here!</p>
+                    <button
+                      onClick={() => router.push("/challenges")}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+                    >
+                      Browse Challenges
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Discover Tab */}

@@ -34,6 +34,7 @@ export default defineSchema({
     originalHabitId: v.optional(v.id("habits")), // If this is a remix, reference to original
     remixCount: v.optional(v.number()), // How many times this habit has been remixed
     integrations: v.optional(v.array(v.string())), // API integrations like "strava", "apple_health", "llm", etc.
+    challengeId: v.optional(v.id("challenges")), // If this habit is part of a challenge
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -400,25 +401,4 @@ export default defineSchema({
     .index("by_challenge", ["challengeId"])
     .index("by_status", ["status"])
     .index("by_winner", ["winnerId"]),
-
-  // Confessionals table - stores confessional videos for broken streaks
-  confessionals: defineTable({
-    userId: v.id("users"),
-    habitId: v.id("habits"),
-    habitName: v.string(),
-    streakLength: v.number(),
-    confessionVideo: v.optional(v.string()), // URL to the recorded confession
-    scenarioId: v.string(), // ID of the deepfake scenario
-    isAntiConfessional: v.boolean(), // true for anti-confessional (victory videos)
-    friendId: v.optional(v.id("users")), // Friend to send the video to
-    status: v.string(), // "pending", "processing", "completed", "failed"
-    processedVideoUrl: v.optional(v.string()), // URL to the processed deepfake video
-    errorMessage: v.optional(v.string()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_user", ["userId"])
-    .index("by_status", ["status"])
-    .index("by_habit", ["habitId"])
-    .index("by_friend", ["friendId"]),
 });

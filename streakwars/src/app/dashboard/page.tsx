@@ -9,8 +9,6 @@ import StatsOverview from "../../components/StatsOverview";
 import AddHabitModal from "../../components/AddHabitModal";
 import AITestPanel from "../../components/AITestPanel";
 import WarSystemTest from "../../components/WarSystemTest";
-import ConfessionalDashboard from "../../components/ConfessionalDashboard";
-import ConfessionalTestPanel from "../../components/ConfessionalTestPanel";
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -98,7 +96,7 @@ export default function DashboardPage() {
               onClick={async () => {
                 if (!confirm("Clear all challenges?")) return;
                 try {
-                  const result = await clearAllChallenges({});
+                  const result = await clearAllChallenges({ userId: currentUser._id });
                   alert(`Cleared ${result.deleted.challenges} challenges!`);
                 } catch (error) {
                   alert("Error clearing challenges");
@@ -123,7 +121,7 @@ export default function DashboardPage() {
               onClick={async () => {
                 if (!confirm("Clear all habits?")) return;
                 try {
-                  const result = await clearAllHabits({});
+                  const result = await clearAllHabits({ userId: currentUser._id });
                   alert(`Cleared ${result.deleted.habits} habits!`);
                 } catch (error) {
                   alert("Error clearing habits");
@@ -148,14 +146,14 @@ export default function DashboardPage() {
               onClick={async () => {
                 if (!confirm("🚨 NUCLEAR OPTION 🚨\n\nThis will delete EVERYTHING!\n\nAre you absolutely sure?")) return;
                 try {
-                  const result = await clearEverything({});
+                  const result = await clearEverything({ userId: currentUser._id });
                   alert(result.message);
                 } catch (error) {
                   alert("Error clearing everything");
                 }
               }}
               style={{
-                width: '100%',
+                width: '100%',  
                 padding: '15px',
                 backgroundColor: '#cc0000',
                 color: '#ffffff',
@@ -252,12 +250,6 @@ export default function DashboardPage() {
             <HabitList userId={currentUser._id} />
           </div>
         </div>
-
-        {/* Confessional Dashboard */}
-        <ConfessionalDashboard userId={currentUser._id} />
-
-        {/* Confessional Test Panel */}
-        <ConfessionalTestPanel userId={currentUser._id} />
       </div>
 
       {/* Add Habit Modal */}

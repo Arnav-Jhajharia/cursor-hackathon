@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useState, useEffect } from "react";
@@ -19,12 +19,20 @@ export default function SabotageChallengeSystem({ warId, challengeId, userId, is
   const [showPowerModal, setShowPowerModal] = useState(false);
   const [powerToUse, setPowerToUse] = useState(1);
 
-  const availableChallenges = useQuery(api.sabotageChallenges.getAvailableSabotageChallenges, { warId });
+  const availableChallenges = useQuery(api.sabotageChallenges.getPersonalizedSabotageChallenges, { warId, userId });
   const completedChallenges = useQuery(api.sabotageChallenges.getCompletedSabotageChallenges, { warId });
   const activeSabotage = useQuery(api.challengeWars.getActiveSabotage, { userId, challengeId });
 
   const completeChallenge = useMutation(api.sabotageChallenges.completeSabotageChallenge);
   const useSabotagePower = useMutation(api.sabotageChallenges.useSabotagePower);
+  
+  // AI Actions (these are actions, not mutations)
+  const generateAIPoem = useAction(api.aiSabotageActions.generateAIPoem);
+  const generateProgrammingJoke = useAction(api.aiSabotageActions.generateProgrammingJoke);
+  const generateTechHaiku = useAction(api.aiSabotageActions.generateTechHaiku);
+  const getAILifeAdvice = useAction(api.aiSabotageActions.getAILifeAdvice);
+  const generateSciFiStory = useAction(api.aiSabotageActions.generateSciFiStory);
+  const verifyAIChallenge = useAction(api.aiSabotageActions.verifyAIChallenge);
 
   const totalSabotagePower = activeSabotage?.sabotagePower || 0;
   const totalCompleted = completedChallenges?.length || 0;
@@ -33,10 +41,23 @@ export default function SabotageChallengeSystem({ warId, challengeId, userId, is
     if (!selectedChallenge) return;
 
     try {
+      // Handle AI-powered challenges
+      if (selectedChallenge.requiresAI) {
+        await handleAIChallenge(selectedChallenge);
+        return;
+      }
+
+      // Handle regular challenges - require proof for verification
+      if (!proof.trim()) {
+        alert("Please provide proof of completion! Take a photo, write a description, or record evidence of your challenge completion.");
+        return;
+      }
+
+      // For non-AI challenges, we still want some verification
       const result = await completeChallenge({
         warId,
         challengeId: selectedChallenge.id,
-        proof: proof.trim() || undefined,
+        proof: proof.trim(),
       });
 
       console.log("✅ Challenge completed:", result);
@@ -52,16 +73,73 @@ export default function SabotageChallengeSystem({ warId, challengeId, userId, is
     }
   };
 
+  const handleAIChallenge = async (challenge: any) => {
+    try {
+      let aiResult;
+      
+      switch (challenge.id) {
+        case "ai_poem":
+          aiResult = await generateAIPoem({ topic: "coding" });
+          break;
+        case "ai_joke":
+          aiResult = await generateProgrammingJoke({});
+          break;
+        case "ai_haiku":
+          aiResult = await generateTechHaiku({});
+          break;
+        case "ai_advice":
+          aiResult = await getAILifeAdvice({});
+          break;
+        case "ai_story":
+          aiResult = await generateSciFiStory({});
+          break;
+        default:
+          throw new Error("Unknown AI challenge");
+      }
+
+      if (aiResult.success) {
+        // Now verify the AI result with robust verification
+        const verificationResult = await verifyAIChallenge({
+          challengeId: challenge.id,
+          userResponse: aiResult.result!,
+          expectedType: challenge.id.replace('ai_', ''),
+        });
+
+        if (verificationResult.success) {
+          // Complete the challenge with verified AI result
+          const result = await completeChallenge({
+            warId,
+            challengeId: challenge.id,
+            proof: `AI Generated: ${aiResult.result} | Verification: ${verificationResult.result}`,
+          });
+
+          console.log("✅ AI Challenge completed and verified:", result);
+          setShowChallengeModal(false);
+          setSelectedChallenge(null);
+          setProof("");
+          
+          // Show success effect with AI result
+          showAIChallengeCompleteEffect(challenge.name, aiResult.result!, verificationResult.sabotagePower || challenge.sabotagePower);
+        } else {
+          alert(`AI challenge verification failed: ${verificationResult.error || verificationResult.result}`);
+        }
+      } else {
+        alert("AI challenge failed: " + aiResult.error);
+      }
+    } catch (error) {
+      console.error("❌ Error completing AI challenge:", error);
+      alert("Failed to complete AI challenge: " + (error as Error).message);
+    }
+  };
+
   const handleUseSabotagePower = async () => {
     try {
       const result = await useSabotagePower({
         warId,
-        powerToUse,
       });
 
       console.log("💀 Sabotage power used:", result);
       setShowPowerModal(false);
-      setPowerToUse(1);
       
       // Show sabotage effect
       showSabotageEffect(result.powerUsed, result.penaltiesApplied);
@@ -69,6 +147,52 @@ export default function SabotageChallengeSystem({ warId, challengeId, userId, is
       console.error("❌ Error using sabotage power:", error);
       alert("Failed to use sabotage power: " + (error as Error).message);
     }
+  };
+
+  const showAIChallengeCompleteEffect = (challengeName: string, aiResult: string, powerEarned: number) => {
+    const effect = document.createElement('div');
+    effect.innerHTML = `
+      <div style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: linear-gradient(45deg, #8B5CF6, #A855F7, #8B5CF6);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        color: white;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        animation: aiChallengeComplete 3s ease-in-out;
+        padding: 2rem;
+        text-align: center;
+      ">
+        <div>🤖 AI CHALLENGE COMPLETE! 🤖</div>
+        <div style="font-size: 1.5rem; margin-top: 1rem;">${challengeName}</div>
+        <div style="font-size: 1.2rem; margin-top: 1rem; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 10px; max-width: 80%;">
+          "${aiResult}"
+        </div>
+        <div style="font-size: 2rem; margin-top: 1rem;">+${powerEarned} SABOTAGE POWER!</div>
+      </div>
+      <style>
+        @keyframes aiChallengeComplete {
+          0% { opacity: 0; transform: scale(0.5); }
+          20% { opacity: 1; transform: scale(1.05); }
+          80% { opacity: 1; transform: scale(1); }
+          100% { opacity: 0; transform: scale(1); }
+        }
+      </style>
+    `;
+    document.body.appendChild(effect);
+    
+    setTimeout(() => {
+      document.body.removeChild(effect);
+    }, 3000);
   };
 
   const showChallengeCompleteEffect = (challengeName: string, powerEarned: number) => {
@@ -196,14 +320,17 @@ export default function SabotageChallengeSystem({ warId, challengeId, userId, is
             <span className="px-3 py-1 bg-purple-600 text-white rounded-full text-sm font-bold">
               {totalSabotagePower} POWER
             </span>
-            {totalSabotagePower > 0 && (
-              <button
-                onClick={() => setShowPowerModal(true)}
-                className="px-3 py-1 bg-red-600 text-white rounded-full text-sm font-bold hover:bg-red-700"
-              >
-                USE POWER
-              </button>
-            )}
+            <button
+              onClick={() => setShowPowerModal(true)}
+              className={`px-3 py-1 rounded-full text-sm font-bold transition-colors ${
+                totalSabotagePower >= 20
+                  ? "bg-red-600 text-white hover:bg-red-700"
+                  : "bg-gray-400 text-gray-600 cursor-not-allowed"
+              }`}
+              disabled={totalSabotagePower < 20}
+            >
+              {totalSabotagePower >= 20 ? "💀 SABOTAGE" : `${totalSabotagePower}/20`}
+            </button>
           </div>
         </div>
 
@@ -223,9 +350,12 @@ export default function SabotageChallengeSystem({ warId, challengeId, userId, is
         </div>
 
         <div className="bg-purple-100 rounded-lg p-3 mb-4">
-          <p className="text-purple-800 text-sm font-medium">
-            💀 Complete random challenges to earn sabotage power! Use this power to make your opponent suffer!
-          </p>
+        <p className="text-purple-800 text-sm font-medium">
+          💀 Complete challenges to earn sabotage power! You need <span className="font-bold text-red-600">20 points</span> to activate sabotage. AI challenges give the most power!
+        </p>
+        <div className="mt-2 text-xs text-purple-600">
+          DEBUG: Current Power: {totalSabotagePower} | Completed: {totalCompleted} | War ID: {warId}
+        </div>
         </div>
 
         {/* Available Challenges */}
@@ -244,7 +374,19 @@ export default function SabotageChallengeSystem({ warId, challengeId, userId, is
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-bold">{challenge.name}</div>
+                      <div className="font-bold flex items-center gap-2">
+                        {challenge.name}
+                        {challenge.isPersonalized && (
+                          <span className="text-xs bg-yellow-500 text-black px-2 py-1 rounded-full font-bold">
+                            YOUR HABIT
+                          </span>
+                        )}
+                        {challenge.requiresAI && (
+                          <span className="text-xs bg-purple-500 text-white px-2 py-1 rounded-full font-bold">
+                            🤖 AI POWERED
+                          </span>
+                        )}
+                      </div>
                       <div className="text-sm opacity-90">{challenge.description}</div>
                     </div>
                     <div className="text-right">
@@ -293,18 +435,32 @@ export default function SabotageChallengeSystem({ warId, challengeId, userId, is
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Proof (Optional)
-                </label>
-                <textarea
-                  value={proof}
-                  onChange={(e) => setProof(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Describe how you completed this challenge..."
-                  rows={3}
-                />
-              </div>
+              {!selectedChallenge.requiresAI && (
+                <div>
+                  <label className="block text-sm font-medium text-red-700 mb-2">
+                    🔒 Proof Required *
+                  </label>
+                  <textarea
+                    value={proof}
+                    onChange={(e) => setProof(e.target.value)}
+                    className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    placeholder="REQUIRED: Describe how you completed this challenge, take a photo, or provide evidence..."
+                    rows={3}
+                    required
+                  />
+                  <p className="text-xs text-red-600 mt-1">
+                    You must provide proof to complete this challenge!
+                  </p>
+                </div>
+              )}
+              
+              {selectedChallenge.requiresAI && (
+                <div className="bg-purple-50 rounded-lg p-3">
+                  <p className="text-purple-800 text-sm font-medium">
+                    🤖 AI Challenge: No proof needed - AI will generate and verify content automatically!
+                  </p>
+                </div>
+              )}
 
               <div className="bg-yellow-50 rounded-lg p-3">
                 <p className="text-yellow-800 text-sm">
@@ -339,35 +495,24 @@ export default function SabotageChallengeSystem({ warId, challengeId, userId, is
       {showPowerModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">💀 Use Sabotage Power</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">💀 ACTIVATE SABOTAGE</h2>
             
             <div className="space-y-4">
               <div className="bg-red-50 rounded-lg p-4">
-                <h3 className="font-bold text-red-800">Current Power: {totalSabotagePower}</h3>
+                <h3 className="font-bold text-red-800">Sabotage Power: {totalSabotagePower}/20</h3>
                 <p className="text-red-700 text-sm mt-1">
-                  Use your sabotage power to make your opponent suffer!
+                  You have enough power to activate MAXIMUM SABOTAGE!
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Power to Use (1-{totalSabotagePower})
-                </label>
-                <input
-                  type="number"
-                  value={powerToUse}
-                  onChange={(e) => setPowerToUse(Math.min(Math.max(1, parseInt(e.target.value) || 1), totalSabotagePower))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  min="1"
-                  max={totalSabotagePower}
-                />
-              </div>
-
-              <div className="bg-red-100 rounded-lg p-3">
-                <p className="text-red-800 text-sm">
-                  💀 Using {powerToUse} power will apply {Math.floor(powerToUse / 2)} penalties to your opponent!
-                  They will lose {powerToUse * 25} coins and face extra challenges!
-                </p>
+              <div className="bg-red-100 rounded-lg p-4">
+                <h4 className="font-bold text-red-800 mb-2">💀 SABOTAGE EFFECTS:</h4>
+                <ul className="text-red-700 text-sm space-y-1">
+                  <li>• Apply {Math.floor(totalSabotagePower / 2)} penalties to opponent</li>
+                  <li>• Steal {totalSabotagePower * 25} coins from them</li>
+                  <li>• Maximum intensity pressure</li>
+                  <li>• Reset your sabotage power to 0</li>
+                </ul>
               </div>
             </div>
 
@@ -375,7 +520,6 @@ export default function SabotageChallengeSystem({ warId, challengeId, userId, is
               <button
                 onClick={() => {
                   setShowPowerModal(false);
-                  setPowerToUse(1);
                 }}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
@@ -385,7 +529,7 @@ export default function SabotageChallengeSystem({ warId, challengeId, userId, is
                 onClick={handleUseSabotagePower}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors"
               >
-                💀 USE SABOTAGE POWER
+                💀 ACTIVATE SABOTAGE
               </button>
             </div>
           </div>

@@ -16,7 +16,7 @@ export const declareWar = mutation({
     const now = Date.now();
     const expiresAt = now + (24 * 60 * 60 * 1000); // 24 hours to accept
 
-    // Check if there's already a pending war between these users for this challenge
+    // Check if there's already an active war between these users for this challenge
     const existingWar = await ctx.db
       .query("challengeWars")
       .withIndex("by_challenger", (q) => q.eq("challengerId", args.challengerId))
@@ -24,13 +24,36 @@ export const declareWar = mutation({
         q.and(
           q.eq(q.field("defenderId"), args.defenderId),
           q.eq(q.field("challengeId"), args.challengeId),
-          q.eq(q.field("status"), "pending")
+          q.or(
+            q.eq(q.field("status"), "pending"),
+            q.eq(q.field("status"), "accepted")
+          )
         )
       )
       .first();
 
     if (existingWar) {
-      throw new Error("You already have a pending war with this person for this challenge!");
+      throw new Error("You already have an active war with this person for this challenge!");
+    }
+
+    // Also check if the defender has already declared war on the challenger
+    const reverseWar = await ctx.db
+      .query("challengeWars")
+      .withIndex("by_challenger", (q) => q.eq("challengerId", args.defenderId))
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("defenderId"), args.challengerId),
+          q.eq(q.field("challengeId"), args.challengeId),
+          q.or(
+            q.eq(q.field("status"), "pending"),
+            q.eq(q.field("status"), "accepted")
+          )
+        )
+      )
+      .first();
+
+    if (reverseWar) {
+      throw new Error("This person has already declared war on you for this challenge!");
     }
 
     // Check if challenger has enough rewards
@@ -568,7 +591,7 @@ export const getActiveSabotage = query({
     challengeId: v.id("challenges"),
   },
   handler: async (ctx, args) => {
-    // Find active sabotage where user is either challenger or defender
+    // Find active war where user is either challenger or defender
     const activeWars = await ctx.db
       .query("challengeWars")
       .withIndex("by_challenge", (q) => q.eq("challengeId", args.challengeId))
@@ -578,8 +601,7 @@ export const getActiveSabotage = query({
             q.eq(q.field("challengerId"), args.userId),
             q.eq(q.field("defenderId"), args.userId)
           ),
-          q.eq(q.field("status"), "accepted"),
-          q.eq(q.field("sabotageActive"), true)
+          q.eq(q.field("status"), "accepted")
         )
       )
       .collect();
