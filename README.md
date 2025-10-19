@@ -36,7 +36,6 @@
 ### 🏅 Gamification
 - **Streak Tracking**: Visual streak counters with color-coded backgrounds
 - **Coin System**: Earn coins for habit completion
-- **Confetti Animations**: Celebration effects for completed habits
 - **Haptic Feedback**: Mobile-optimized touch feedback
 - **Leaderboards**: Challenge rankings and friend comparisons
 
@@ -66,7 +65,6 @@
 - **Groq** - AI-powered features
   - `llama-3.1-8b-instant` for text processing
   - `meta-llama/llama-4-scout-17b-16e-instruct` for multimodal (image + text)
-  - Smart autocomplete suggestions
   - Habit verification
 
 - **Exa** - Research and content generation
