@@ -10,7 +10,7 @@
 
 ## 🚀 Live Demo
 
-**Access the app**: [https://streakwars.vercel.app/dashboard](https://streakwars.vercel.app/dashboard)
+**Access the app**: [https://streakwars.vercel.app](https://streakwars.vercel.app)
 
 ---
 
