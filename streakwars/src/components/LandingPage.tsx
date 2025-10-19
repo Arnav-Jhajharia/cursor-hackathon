@@ -1131,7 +1131,7 @@ export default function LandingPage() {
               <div className="video-placeholder">
                 <div className="play-button"></div>
                 <h3 className="video-title">Watch How It Works</h3>
-                <p className="video-subtitle">See habituate in action</p>
+                <p className="video-subtitle">See StreakWars in action</p>
               </div>
             </div>
           </div>
