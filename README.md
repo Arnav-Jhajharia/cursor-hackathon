@@ -22,7 +22,7 @@
 - **AI-Powered Verification**: Verify habits using Groq AI (photo upload or reading summaries)
 - **Smart Habit Discovery**: AI-generated habit ideas powered by Exa research
 - **Real-time Updates**: Live updates when friends complete habits or challenges
-- **Points & Rewards**: Earn coins for habit completion and compete on leaderboards
+- **Points & Rewards**: Earn coins for habit completion and compete on leaderboards, use these to sabotage your friends in challenges
 
 ### 🤖 AI Features
 - **Smart Autocomplete**: Groq-powered habit name suggestions as you type
