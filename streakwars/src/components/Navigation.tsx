@@ -46,7 +46,7 @@ export default function Navigation() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex justify-between items-center h-14">
             <h1 className="text-lg font-bold text-indigo-600">
-              habituate
+              streakwars
             </h1>
             <UserButton />
           </div>
