@@ -1,6 +1,6 @@
-# 🏆 Streak Wars - Competitive Habit Tracker
+# 🏆 Streak Wars - The Most Chaotic Habit Tracker Ever Built
 
-**Transform habit building into a social, competitive experience with AI-powered features and financial accountability.**
+**Turn discipline into a game of sabotage, streaks, and social chaos — powered by AI, Convex, and caffeine.**
 
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://your-vercel-deployment-link.com)
 [![Built with Next.js](https://img.shields.io/badge/Built%20with-Next.js-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
@@ -92,7 +92,7 @@
 
 ### 3. **Completing Habits**
 - Click **"Complete"** button for any active habit
-- Enjoy confetti animations and coin rewards
+- Enjoy coin rewards
 - Optional: Click **"Verify with AI"** for photo or reading verification
 
 ### 4. **Creating Challenges**
@@ -199,7 +199,6 @@ useAction(api.exaActions.getHabitIdeasAction)
 
 ### **Visual Feedback**
 - **Streak Colors**: Gray → Green → Gold → Red (danger zone)
-- **Confetti Animations**: Celebration for completions
 - **Coin Rewards**: Visual coin counter
 - **Loading States**: Smooth loading indicators
 - **Error Handling**: User-friendly error messages
