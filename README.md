@@ -10,9 +10,7 @@
 
 ## 🚀 Live Demo
 
-**Access the app**: [https://your-vercel-deployment-link.com](https://your-vercel-deployment-link.com)
-
-*Replace `your-vercel-deployment-link.com` with your actual Vercel deployment URL*
+**Access the app**: [https://streakwars.vercel.app/dashboard](https://streakwars.vercel.app/dashboard)
 
 ---
 
